@@ -45,8 +45,6 @@ const ManagerDashboard = () => {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [staffToAssign, setStaffToAssign] = useState(null);
   const [notifications, setNotifications] = useState([]);
 
   // Data states
@@ -384,48 +382,6 @@ const ManagerDashboard = () => {
   const handleRoomSelect = (roomId) => {
     setSelectedRoom(roomId);
     loadMessages(roomId);
-  };
-
-  // Handle staff actions
-  const assignStaff = (staff) => {
-    setStaffToAssign(staff);
-    setShowAssignModal(true);
-  };
-
-  const confirmAssignStaff = async (taskId) => {
-    try {
-      await api.post(`manager/assign-task`, {
-        staff_id: staffToAssign.id,
-        task_id: taskId
-      });
-
-      setShowAssignModal(false);
-      loadDashboardData();
-      handleNotification({
-        message: `Nhiệm vụ đã được gán cho ${staffToAssign.full_name}`
-      });
-    } catch (error) {
-      console.error("Error assigning staff:", error);
-    }
-  };
-
-  // Export report
-  const exportReport = async (format = 'pdf') => {
-    try {
-      const response = await api.get(`manager/reports/export?format=${format}`);
-      if (response && !response.error) {
-        // Handle file download
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `report-${new Date().toISOString().split('T')[0]}.${format}`);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      }
-    } catch (error) {
-      console.error("Error exporting report:", error);
-    }
   };
 
   // Handle logout
@@ -1095,16 +1051,6 @@ const ManagerDashboard = () => {
         title="Xác nhận đăng xuất"
         message="Bạn có chắc chắn muốn đăng xuất?"
         confirmText="Đăng xuất"
-        cancelText="Hủy"
-      />
-
-      <ConfirmModal
-        isOpen={showAssignModal}
-        onClose={() => setShowAssignModal(false)}
-        onConfirm={() => confirmAssignStaff('task-123')} // Example task ID
-        title="Phân công nhân viên"
-        message={`Phân công ${staffToAssign?.full_name || 'nhân viên'} cho nhiệm vụ này?`}
-        confirmText="Phân công"
         cancelText="Hủy"
       />
 

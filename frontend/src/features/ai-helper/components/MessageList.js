@@ -1,10 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../../shared/AuthContext';
-
 const MessageList = ({ messages, loading }) => {
-  const { user } = useAuth();
-
   if (loading && messages.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -39,7 +35,7 @@ const MessageList = ({ messages, loading }) => {
     <div className="space-y-4 overflow-y-auto">
       {sortedMessages.map((message, index) => {
         const isUser = message.role === 'user';
-        
+
         return (
           <motion.div
             key={message.id || index}
@@ -49,20 +45,18 @@ const MessageList = ({ messages, loading }) => {
             className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                isUser
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-900'
-              }`}
+              className={`max-w-[80%] rounded-2xl px-4 py-3 ${isUser
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white'
+                : 'bg-gray-100 text-gray-900'
+                }`}
             >
               <div className="text-sm whitespace-pre-wrap break-words">
                 {message.message}
               </div>
               {message.created_at && (
                 <div
-                  className={`text-xs mt-2 ${
-                    isUser ? 'text-blue-100' : 'text-gray-500'
-                  }`}
+                  className={`text-xs mt-2 ${isUser ? 'text-blue-100' : 'text-gray-500'
+                    }`}
                 >
                   {new Date(message.created_at).toLocaleTimeString('vi-VN', {
                     hour: '2-digit',

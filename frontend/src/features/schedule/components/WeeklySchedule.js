@@ -15,7 +15,6 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
   const { user } = useAuth();
   const [weekStartDate, setWeekStartDate] = useState(() => {
     const today = new Date();
-    const day = today.getDay();
     return startOfWeek(today, { weekStartsOn: 1 });
   });
 

@@ -2,14 +2,13 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../../shared/AuthContext';
 import scheduleAPI from '../../../shared/services/api/schedule';
-import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
+import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 
 const PersonalSchedule = () => {
   const { user } = useAuth();
   const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [shifts, setShifts] = useState([]);
 
   // Generate week days (Monday to Sunday)
   const weekDays = useMemo(() => {
@@ -26,37 +25,7 @@ const PersonalSchedule = () => {
     return days;
   }, [currentWeek]);
 
-  // Load shifts
-  const loadShifts = useCallback(async () => {
-    try {
-      const defaultShifts = [
-        {
-          id: '550e8400-e29b-41d4-a716-446655440001',
-          name: 'Ca Sáng',
-          shift_type: 'morning',
-          start_time: '07:00:00',
-          end_time: '15:00:00'
-        },
-        {
-          id: '550e8400-e29b-41d4-a716-446655440002',
-          name: 'Ca Chiều',
-          shift_type: 'afternoon',
-          start_time: '15:00:00',
-          end_time: '23:00:00'
-        },
-        {
-          id: '550e8400-e29b-41d4-a716-446655440003',
-          name: 'Ca Tối',
-          shift_type: 'night',
-          start_time: '23:00:00',
-          end_time: '07:00:00'
-        }
-      ];
-      setShifts(defaultShifts);
-    } catch (error) {
-      console.error('Error loading shifts:', error);
-    }
-  }, []);
+
 
   // Load personal schedule
   const loadPersonalSchedule = useCallback(async () => {
@@ -91,10 +60,6 @@ const PersonalSchedule = () => {
       setLoading(false);
     }
   }, [currentWeek, user]);
-
-  useEffect(() => {
-    loadShifts();
-  }, [loadShifts]);
 
   useEffect(() => {
     loadPersonalSchedule();

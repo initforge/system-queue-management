@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../shared/AuthContext';
 import aiHelperAPI from '../../shared/services/api/aiHelper';
 import MessageList from './components/MessageList';
 import ContextPanel from './components/ContextPanel';
@@ -9,7 +8,6 @@ import ApiKeyModal from './components/ApiKeyModal';
 const GEMINI_API_KEY_STORAGE = 'gemini_api_key';
 
 const AIHelper = ({ role = 'staff' }) => {
-  const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -71,7 +69,7 @@ const AIHelper = ({ role = 'staff' }) => {
       };
       loadHistory();
     }
-  }, [conversationId]); // Only load when conversationId changes, not on every render
+  }, [conversationId, messages.length]); // Added messages.length to dependencies
 
   // Auto scroll to bottom when messages change
   useEffect(() => {

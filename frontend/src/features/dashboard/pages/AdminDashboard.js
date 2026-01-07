@@ -13,13 +13,7 @@ const AdminDashboard = () => {
     error,
     fetchDepartments,
     fetchUsers,
-    fetchSystemStats,
-    createDepartment,
-    updateDepartment,
-    deleteDepartment,
-    createUser,
-    updateUser,
-    deleteUser
+    fetchSystemStats
   } = useAdminDashboard();
 
   // WebSocket data placeholders (to be integrated later if needed)
@@ -27,8 +21,14 @@ const AdminDashboard = () => {
   const ticketCount = 0;
   const staffActivity = [];
   const criticalAlerts = [];
-  const requestSystemStats = () => { };
-  const requestStaffActivity = () => { };
+
+  const requestSystemStats = React.useCallback(() => {
+    // Implementation for requesting live stats via WS
+  }, []);
+
+  const requestStaffActivity = React.useCallback(() => {
+    // Implementation for requesting staff logs via WS
+  }, []);
 
   useEffect(() => {
     // Fetch initial data based on active tab

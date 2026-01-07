@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useWebSocket } from '../../../shared/WebSocketContext';
 import { ApiClient } from '../../../shared/services/api/client';
 
@@ -13,11 +12,11 @@ const DepartmentTicketsMonitor = ({ department, onRefresh }) => {
 
   useEffect(() => {
     loadTickets();
-    
+
     // Set up real-time updates via WebSocket
     if (isConnected && socket) {
       socket.on('ticket_update', handleTicketUpdate);
-      
+
       return () => {
         socket.off('ticket_update', handleTicketUpdate);
       };
@@ -72,8 +71,8 @@ const DepartmentTicketsMonitor = ({ department, onRefresh }) => {
     }
   };
 
-  const filteredTickets = filter === 'all' 
-    ? tickets 
+  const filteredTickets = filter === 'all'
+    ? tickets
     : tickets.filter(ticket => ticket.status === filter);
 
   return (
@@ -90,51 +89,46 @@ const DepartmentTicketsMonitor = ({ department, onRefresh }) => {
             </svg>
           </button>
         </div>
-        
+
         <div className="flex space-x-2 mt-3 overflow-x-auto pb-1">
           <button
             onClick={() => setFilter('all')}
-            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
-              filter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-800'
-            }`}
+            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${filter === 'all' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-800'
+              }`}
           >
             Tất cả
           </button>
           <button
             onClick={() => setFilter('WAITING')}
-            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
-              filter === 'WAITING' ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-800'
-            }`}
+            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${filter === 'WAITING' ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-800'
+              }`}
           >
             Đang chờ
           </button>
           <button
             onClick={() => setFilter('CALLED')}
-            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
-              filter === 'CALLED' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-800'
-            }`}
+            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${filter === 'CALLED' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-800'
+              }`}
           >
             Đã gọi
           </button>
           <button
             onClick={() => setFilter('SERVING')}
-            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
-              filter === 'SERVING' ? 'bg-green-500 text-white' : 'bg-green-100 text-green-800'
-            }`}
+            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${filter === 'SERVING' ? 'bg-green-500 text-white' : 'bg-green-100 text-green-800'
+              }`}
           >
             Đang phục vụ
           </button>
           <button
             onClick={() => setFilter('COMPLETED')}
-            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
-              filter === 'COMPLETED' ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-800'
-            }`}
+            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${filter === 'COMPLETED' ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-800'
+              }`}
           >
             Hoàn thành
           </button>
         </div>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -209,7 +203,7 @@ const DepartmentTicketsMonitor = ({ department, onRefresh }) => {
 const ManagerDashboardQueues = () => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+
   useEffect(() => {
     const loadDepartments = async () => {
       setLoading(true);
@@ -222,10 +216,10 @@ const ManagerDashboardQueues = () => {
         setLoading(false);
       }
     };
-    
+
     loadDepartments();
   }, []);
-  
+
   return (
     <div className="space-y-6">
       {loading ? (
@@ -246,9 +240,9 @@ const ManagerDashboardQueues = () => {
         </div>
       ) : (
         departments.map(department => (
-          <DepartmentTicketsMonitor 
-            key={department.id} 
-            department={department} 
+          <DepartmentTicketsMonitor
+            key={department.id}
+            department={department}
           />
         ))
       )}

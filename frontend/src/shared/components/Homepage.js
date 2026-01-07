@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 
 const Homepage = () => {
-  const navigate = useNavigate();
   const containerRef = useRef(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const mouseX = useMotionValue(0);
@@ -25,10 +23,10 @@ const Homepage = () => {
       const rect = containerRef.current.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
-      
+
       const normalizedX = (e.clientX - centerX) / rect.width;
       const normalizedY = (e.clientY - centerY) / rect.height;
-      
+
       mouseX.set(normalizedX);
       mouseY.set(normalizedY);
     }
@@ -204,7 +202,7 @@ const Homepage = () => {
                 transition={{ duration: 0.8, delay: 0.5 }}
                 className="text-xl md:text-2xl text-slate-400 font-light leading-relaxed max-w-2xl"
               >
-                Nền tảng công nghệ tiên tiến giúp tối ưu hóa trải nghiệm khách hàng 
+                Nền tảng công nghệ tiên tiến giúp tối ưu hóa trải nghiệm khách hàng
                 và nâng cao hiệu quả vận hành doanh nghiệp
               </motion.p>
             </div>

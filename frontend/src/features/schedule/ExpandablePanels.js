@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import scheduleAPI from '../../shared/services/api/schedule';
-import { ApiClient } from '../../shared/services/api/client';
 import { useAuth } from '../../shared/AuthContext';
 
 const ExpandablePanel = ({ icon, title, children, isExpanded, onToggle }) => {
@@ -104,15 +103,15 @@ const LeaveRequestPanel = () => {
   const confirmReject = async () => {
     if (selectedRequest && rejectReason.trim()) {
       try {
-        await scheduleAPI.updateLeaveRequest(selectedRequest.id, { 
+        await scheduleAPI.updateLeaveRequest(selectedRequest.id, {
           status: 'rejected',
           rejection_reason: rejectReason
         });
         setLeaveRequests(prev => prev.filter(req => req.id !== selectedRequest.id));
         await loadLeaveRequests();
-    setShowModal(false);
-    setSelectedRequest(null);
-    setRejectReason('');
+        setShowModal(false);
+        setSelectedRequest(null);
+        setRejectReason('');
       } catch (error) {
         console.error('Error rejecting leave request:', error);
         alert('Lỗi khi từ chối đơn nghỉ phép. Vui lòng thử lại.');
@@ -162,10 +161,10 @@ const LeaveRequestPanel = () => {
                   </div>
                   <div className="ml-13">
                     <div className="text-sm text-gray-700 mb-1">
-                      <strong>Loại:</strong> {request.leave_type === 'sick' ? 'Nghỉ ốm' : 
-                                              request.leave_type === 'personal' ? 'Việc cá nhân' :
-                                              request.leave_type === 'vacation' ? 'Nghỉ phép' :
-                                              request.leave_type === 'emergency' ? 'Khẩn cấp' : request.leave_type}
+                      <strong>Loại:</strong> {request.leave_type === 'sick' ? 'Nghỉ ốm' :
+                        request.leave_type === 'personal' ? 'Việc cá nhân' :
+                          request.leave_type === 'vacation' ? 'Nghỉ phép' :
+                            request.leave_type === 'emergency' ? 'Khẩn cấp' : request.leave_type}
                     </div>
                     <div className="text-sm text-gray-700 mb-1">
                       <strong>Lý do:</strong> {request.reason}
@@ -295,8 +294,8 @@ const StaffLeaveRequestPanel = () => {
         leave_type: leaveForm.type,
         reason: leaveForm.reason
       });
-      
-    setLeaveForm({ date: '', reason: '', type: 'sick' });
+
+      setLeaveForm({ date: '', reason: '', type: 'sick' });
       alert('Đơn xin nghỉ đã được gửi thành công!');
       await loadMyRequests();
     } catch (error) {
@@ -365,9 +364,8 @@ const StaffLeaveRequestPanel = () => {
             whileTap={{ scale: 0.98 }}
             onClick={submitLeaveRequest}
             disabled={submitting}
-            className={`w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-medium hover:from-purple-600 hover:to-purple-700 transition-colors ${
-              submitting ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className={`w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-medium hover:from-purple-600 hover:to-purple-700 transition-colors ${submitting ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
           >
             {submitting ? 'Đang gửi...' : '📝 Gửi đơn xin nghỉ'}
           </motion.button>
@@ -405,10 +403,10 @@ const StaffLeaveRequestPanel = () => {
                       </div>
                     </div>
                     <div className="text-sm text-gray-700 mb-1">
-                      <strong>Loại:</strong> {request.leave_type === 'sick' ? 'Nghỉ ốm' : 
-                                              request.leave_type === 'personal' ? 'Việc cá nhân' :
-                                              request.leave_type === 'vacation' ? 'Nghỉ phép' :
-                                              request.leave_type === 'emergency' ? 'Khẩn cấp' : request.leave_type}
+                      <strong>Loại:</strong> {request.leave_type === 'sick' ? 'Nghỉ ốm' :
+                        request.leave_type === 'personal' ? 'Việc cá nhân' :
+                          request.leave_type === 'vacation' ? 'Nghỉ phép' :
+                            request.leave_type === 'emergency' ? 'Khẩn cấp' : request.leave_type}
                     </div>
                     <div className="text-sm text-gray-700">
                       <strong>Lý do:</strong> {request.reason}
@@ -853,4 +851,11 @@ const ManagerStatisticsPanel = () => {
   );
 };
 
-export { ExpandablePanel, LeaveRequestPanel, StaffLeaveRequestPanel, StaffStatisticsPanel, ManagerStatisticsPanel };
+export {
+  ExpandablePanel,
+  LeaveRequestPanel,
+  StaffLeaveRequestPanel,
+  StaffStatisticsPanel,
+  ManagerStatisticsPanel,
+  StaffShiftExchangePanel
+};

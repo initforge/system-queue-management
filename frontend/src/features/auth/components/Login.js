@@ -12,7 +12,7 @@ const AnalogClock = React.memo(({ currentTime }) => {
     const now = currentTime;
     const minutes = now.getMinutes();
     const seconds = now.getSeconds();
-    
+
     // Set minute hand position
     if (minuteHandRef.current) {
       const minuteRotation = minutes * 6 + (seconds * 0.1);
@@ -22,16 +22,15 @@ const AnalogClock = React.memo(({ currentTime }) => {
     // Set second hand initial position và start CSS animation
     if (secondHandRef.current) {
       const secondRotation = seconds * 6;
-      
+
       // Reset animation và force reflow
       secondHandRef.current.style.animation = 'none';
       void secondHandRef.current.offsetHeight; // Force reflow
-      
+
       // Set initial rotation
       secondHandRef.current.style.transform = `rotate(${secondRotation}deg)`;
-      
+
       // Start continuous animation from current position
-      const remainingSeconds = 60 - seconds;
       secondHandRef.current.style.animation = `secondHandRotate 60s linear infinite`;
       secondHandRef.current.style.animationDelay = `${-seconds}s`;
     }
@@ -154,7 +153,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const containerRef = useRef(null);
-  
+
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const x = useSpring(useTransform(mouseX, [-0.5, 0.5], [-20, 20]), { damping: 50, stiffness: 100 });
@@ -225,7 +224,7 @@ const Login = () => {
       <div className="absolute inset-0">
         <motion.div
           className="absolute inset-0"
-              style={{
+          style={{
             background: 'radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.12) 0%, transparent 70%)',
             x,
             y
@@ -239,7 +238,7 @@ const Login = () => {
             y: useTransform(y, (y) => -y * 0.5)
           }}
         />
-        
+
         {/* Grid Pattern */}
         <div
           className="absolute inset-0 opacity-[0.02]"
@@ -255,29 +254,29 @@ const Login = () => {
 
       {/* Main Content */}
       <div className="relative z-10 max-w-6xl w-full grid lg:grid-cols-2 gap-12 items-center">
-          
+
         {/* Left Panel - Clock & Information */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
+        <motion.div
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="hidden lg:block"
-          >
+        >
           <div className="space-y-10">
             {/* Animated Clock */}
-              <motion.div
+            <motion.div
               initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
               transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                className="relative"
-              >
+              className="relative"
+            >
               <AnalogClock currentTime={currentTime} />
-              </motion.div>
+            </motion.div>
 
             {/* Time Display */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
               className="text-center space-y-2"
             >
@@ -285,36 +284,36 @@ const Login = () => {
                 {currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </div>
               <div className="text-slate-400 text-lg">
-                  {currentTime.toLocaleDateString('vi-VN', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </div>
-              </motion.div>
+                {currentTime.toLocaleDateString('vi-VN', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric'
+                })}
+              </div>
+            </motion.div>
 
             {/* System Info */}
-              <motion.div
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5 }}
-                className="space-y-4"
-              >
+              className="space-y-4"
+            >
               <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
                 Queue Management System
-                </h1>
+              </h1>
               <p className="text-slate-400 text-lg leading-relaxed">
                 Đăng nhập để truy cập vào hệ thống quản lý hàng đợi thông minh
               </p>
-              </motion.div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
+        </motion.div>
 
         {/* Right Panel - Login Form */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="w-full max-w-md mx-auto lg:mx-0"
         >
@@ -323,13 +322,13 @@ const Login = () => {
             <div className="bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
               <div className="p-10">
                 {/* Header */}
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
                   className="text-center mb-8"
                 >
-                  <motion.div 
+                  <motion.div
                     className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-blue-500/25"
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     transition={{ duration: 0.3 }}
@@ -344,21 +343,21 @@ const Login = () => {
 
                 {/* Error Message */}
                 <AnimatePresence>
-                {error && (
-                  <motion.div
+                  {error && (
+                    <motion.div
                       initial={{ opacity: 0, scale: 0.95, y: -10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm"
-                  >
+                    >
                       <div className="flex items-center text-red-400">
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span className="text-sm">{error}</span>
-                    </div>
-                  </motion.div>
-                )}
+                      </div>
+                    </motion.div>
+                  )}
                 </AnimatePresence>
 
                 {/* Form */}
@@ -379,15 +378,15 @@ const Login = () => {
                         </svg>
                       </div>
                       <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
                         className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-white placeholder-slate-500"
                         placeholder="name@example.com"
-                      required
-                    />
+                        required
+                      />
                     </div>
                   </motion.div>
 
@@ -407,15 +406,15 @@ const Login = () => {
                         </svg>
                       </div>
                       <input
-                      type="password"
-                      id="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
+                        type="password"
+                        id="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
                         className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-white placeholder-slate-500"
                         placeholder="••••••••"
-                      required
-                    />
+                        required
+                      />
                     </div>
                   </motion.div>
 
@@ -423,9 +422,8 @@ const Login = () => {
                   <motion.button
                     type="submit"
                     disabled={isLoading}
-                    className={`w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-500/25 transition-all duration-300 ${
-                      isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-xl hover:shadow-blue-500/40'
-                    }`}
+                    className={`w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg shadow-blue-500/25 transition-all duration-300 ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:shadow-xl hover:shadow-blue-500/40'
+                      }`}
                     whileHover={!isLoading ? { scale: 1.02, y: -2 } : {}}
                     whileTap={!isLoading ? { scale: 0.98 } : {}}
                     initial={{ opacity: 0, y: 20 }}
@@ -434,7 +432,7 @@ const Login = () => {
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center">
-                        <motion.div 
+                        <motion.div
                           className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3"
                           animate={{ rotate: 360 }}
                           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -460,7 +458,7 @@ const Login = () => {
                   className="mt-8 text-center text-sm text-slate-400"
                 >
                   <a href="#" className="hover:text-blue-400 transition-colors">Quên mật khẩu?</a>
-              </motion.div>
+                </motion.div>
               </div>
             </div>
 
@@ -473,8 +471,8 @@ const Login = () => {
               }}
               transition={{ duration: 4, repeat: Infinity }}
             />
-            </div>
-          </motion.div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
