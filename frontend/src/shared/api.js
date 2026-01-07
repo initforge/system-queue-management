@@ -27,11 +27,11 @@ class ApiService {
     try {
       const response = await fetch(url, config);
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.detail || 'API request failed');
       }
-      
+
       return data;
     } catch (error) {
       console.error(`API Error (${endpoint}):`, error);
@@ -200,7 +200,7 @@ class ApiService {
 
   // Health check
   async healthCheck() {
-    return fetch('http://localhost:8000/api/v1/health').then(r => r.json());
+    return fetch(`${API_BASE_URL}/health`).then(r => r.json());
   }
 
   // ===== STAFF APIs =====
@@ -429,8 +429,8 @@ export const useAdminDashboard = () => {
     setLoading(prev => ({ ...prev, departments: true }));
     setError(null);
     try {
-      await apiService.makeRequest(`/admin/departments/${departmentId}`, { 
-        method: 'DELETE' 
+      await apiService.makeRequest(`/admin/departments/${departmentId}`, {
+        method: 'DELETE'
       });
       // Update departments list
       fetchDepartments();

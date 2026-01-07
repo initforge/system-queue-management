@@ -33,7 +33,7 @@ const FadeIn = ({ children, className, delay = 0 }) => (
 const ServiceRegistrationPage = () => {
   const navigate = useNavigate();
   const { deptCode } = useParams();
-  
+
   const [departments, setDepartments] = useState([]);
   const [services, setServices] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('');
@@ -95,15 +95,15 @@ const ServiceRegistrationPage = () => {
     const fetchDepartments = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:8000/api/v1/departments');
+        const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1'}/departments`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        
+
         console.log('Departments loaded from API:', data);
         setDepartments(data);
-        
+
         if (deptCode) {
           const dept = data.find(d => d.code === deptCode.toUpperCase());
           if (dept) {
@@ -138,13 +138,13 @@ const ServiceRegistrationPage = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      
+
       // Validate required fields
       if (!customerInfo.name || !customerInfo.phone || !selectedDepartment || !selectedService?.id) {
         setErrors({ submit: 'Vui lòng điền đầy đủ thông tin bắt buộc!' });
         return;
       }
-      
+
       // Prepare API payload
       const ticketPayload = {
         customer_name: customerInfo.name,
@@ -162,33 +162,33 @@ const ServiceRegistrationPage = () => {
           service_name: selectedService.name
         }
       };
-      
+
       console.log('Creating ticket with payload:', ticketPayload);
-      
+
       // Call real API to create ticket
       const response = await apiService.makeRequest('/tickets/register', {
         method: 'POST',
         body: JSON.stringify(ticketPayload)
       });
-      
+
       console.log('Ticket created successfully:', response);
-      
+
       // Extract ticket ID from response
       const ticketId = response.ticket?.id || response.id;
-      
+
       if (!ticketId) {
         throw new Error('Invalid ticket response: missing ticket ID');
       }
-      
+
       // Join WebSocket queue if available
       if (joinQueue) {
         // Join by ticket id for real-time updates
         joinQueue(ticketId);
       }
-      
+
       // Navigate to waiting page with real ticket data
-      navigate(`/waiting/${ticketId}`, { 
-        state: { 
+      navigate(`/waiting/${ticketId}`, {
+        state: {
           ticket: {
             id: ticketId,
             ticketNumber: response.ticket?.ticket_number || response.ticket_number,
@@ -203,7 +203,7 @@ const ServiceRegistrationPage = () => {
             position: response.queue_position || 1,
             status: response.ticket?.status || response.status
           }
-        } 
+        }
       });
     } catch (error) {
       console.error('Error creating ticket:', error);
@@ -269,13 +269,13 @@ const ServiceRegistrationPage = () => {
       <div className="absolute inset-0 opacity-20 pointer-events-none">
         <div className="w-full h-full bg-gradient-to-br from-blue-100/30 to-transparent"></div>
       </div>
-      
+
       {/* Header with progress bar */}
       <FadeIn className="bg-white/95 backdrop-blur-sm shadow-xl border-b border-blue-100">
         <div className="max-w-6xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
-              <motion.div 
+              <motion.div
                 className="w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -289,33 +289,32 @@ const ServiceRegistrationPage = () => {
                 <p className="text-blue-600 text-sm">Vui lòng chọn dịch vụ bạn cần sử dụng</p>
               </div>
             </div>
-            
+
             {/* Modern progress indicator */}
             <div className="flex items-center space-x-2">
               {[1, 2, 3].map((i) => (
                 <motion.div
                   key={i}
                   initial={{ scale: 0.8, opacity: 0.5 }}
-                  animate={{ 
+                  animate={{
                     scale: i <= step ? 1 : 0.8,
                     opacity: i <= step ? 1 : 0.5
                   }}
                   transition={{ duration: 0.3, delay: i * 0.1 }}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-                    i <= step 
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg transform scale-110' 
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${i <= step
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg transform scale-110'
                       : 'bg-gray-200 text-gray-500'
-                  }`}
+                    }`}
                 >
                   {i < step ? '✓' : i}
                 </motion.div>
               ))}
             </div>
           </div>
-          
+
           {/* Progress bar */}
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <motion.div 
+            <motion.div
               className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${(step / 3) * 100}%` }}
@@ -333,7 +332,7 @@ const ServiceRegistrationPage = () => {
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Error Message */}
         {errors.general && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm"
@@ -351,7 +350,7 @@ const ServiceRegistrationPage = () => {
         {step === 1 && (
           <FadeIn>
             <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
-              <motion.h2 
+              <motion.h2
                 className="text-3xl font-bold text-blue-900 mb-8 text-center"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -365,9 +364,9 @@ const ServiceRegistrationPage = () => {
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.15 }}
-                    whileHover={{ 
-                      scale: 1.03, 
-                      boxShadow: "0 20px 40px rgba(59, 130, 246, 0.15)" 
+                    whileHover={{
+                      scale: 1.03,
+                      boxShadow: "0 20px 40px rgba(59, 130, 246, 0.15)"
                     }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => handleDepartmentSelect(dept.id)}
@@ -395,7 +394,7 @@ const ServiceRegistrationPage = () => {
         {step === 2 && (
           <FadeIn>
             <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
-              <motion.h2 
+              <motion.h2
                 className="text-3xl font-bold text-blue-900 mb-2 text-center"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -403,10 +402,10 @@ const ServiceRegistrationPage = () => {
                 🎯 {departments.find(d => d.id === selectedDepartment)?.name}
               </motion.h2>
               <p className="text-center text-blue-600 mb-8 text-lg">Chọn dịch vụ bạn cần</p>
-              
+
               {loading ? (
                 <div className="flex justify-center py-16">
-                  <motion.div 
+                  <motion.div
                     className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -420,7 +419,7 @@ const ServiceRegistrationPage = () => {
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
-                      whileHover={{ 
+                      whileHover={{
                         scale: 1.02,
                         boxShadow: "0 15px 35px rgba(76, 175, 80, 0.15)"
                       }}
@@ -442,9 +441,9 @@ const ServiceRegistrationPage = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <p className="text-gray-600 mb-4 line-height-1.5">{service.description}</p>
-                      
+
                       <div className="flex justify-between items-center pt-4 border-t border-gray-100">
                         <div className="text-right">
                           <div className="text-2xl font-bold text-green-600">{service.price}</div>
@@ -467,7 +466,7 @@ const ServiceRegistrationPage = () => {
                   ))}
                 </div>
               )}
-              
+
               <div className="mt-8 flex justify-center">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -489,14 +488,14 @@ const ServiceRegistrationPage = () => {
         {step === 3 && (
           <FadeIn>
             <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
-              <motion.h2 
+              <motion.h2
                 className="text-3xl font-bold text-blue-900 mb-8 text-center"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
               >
                 👤 Thông tin khách hàng
               </motion.h2>
-              
+
               <div className="max-w-2xl mx-auto">
                 <div className="space-y-6">
                   <motion.div
@@ -510,12 +509,12 @@ const ServiceRegistrationPage = () => {
                     <input
                       type="text"
                       value={customerInfo.name}
-                      onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
+                      onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-lg font-medium text-gray-900 hover:border-blue-300"
                       placeholder="Nhập họ và tên đầy đủ"
                     />
                   </motion.div>
-                  
+
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -527,12 +526,12 @@ const ServiceRegistrationPage = () => {
                     <input
                       type="tel"
                       value={customerInfo.phone}
-                      onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
+                      onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-lg font-medium text-gray-900 hover:border-blue-300"
                       placeholder="Nhập số điện thoại"
                     />
                   </motion.div>
-                  
+
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -544,12 +543,12 @@ const ServiceRegistrationPage = () => {
                     <input
                       type="email"
                       value={customerInfo.email}
-                      onChange={(e) => setCustomerInfo({...customerInfo, email: e.target.value})}
+                      onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-lg font-medium text-gray-900 hover:border-blue-300"
                       placeholder="Nhập email (không bắt buộc)"
                     />
                   </motion.div>
-                  
+
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -560,16 +559,16 @@ const ServiceRegistrationPage = () => {
                     </label>
                     <textarea
                       value={customerInfo.notes}
-                      onChange={(e) => setCustomerInfo({...customerInfo, notes: e.target.value})}
+                      onChange={(e) => setCustomerInfo({ ...customerInfo, notes: e.target.value })}
                       rows={4}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-lg font-medium text-gray-900 hover:border-blue-300 resize-none"
                       placeholder="Ghi chú thêm về yêu cầu của bạn (không bắt buộc)"
                     />
                   </motion.div>
                 </div>
-                
+
                 {errors.submit && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="mt-6 bg-red-50 border border-red-200 rounded-xl p-4"
@@ -577,7 +576,7 @@ const ServiceRegistrationPage = () => {
                     <p className="text-red-800 font-medium">{errors.submit}</p>
                   </motion.div>
                 )}
-                
+
                 <div className="flex justify-between mt-8 gap-4">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -590,7 +589,7 @@ const ServiceRegistrationPage = () => {
                     </svg>
                     <span>Quay lại</span>
                   </motion.button>
-                  
+
                   <motion.button
                     whileHover={{ scale: loading ? 1 : 1.05 }}
                     whileTap={{ scale: loading ? 1 : 0.95 }}
@@ -600,7 +599,7 @@ const ServiceRegistrationPage = () => {
                   >
                     {loading ? (
                       <>
-                        <motion.div 
+                        <motion.div
                           className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                           animate={{ rotate: 360 }}
                           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}

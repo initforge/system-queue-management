@@ -658,912 +658,910 @@ const StaffDashboard = () => {
 
       // 🔗 Handle page unload (browser close/refresh)
       const handleBeforeUnload = () => {
-        try {
-          // Use sendBeacon for reliable offline status on page unload
-          navigator.sendBeacon('http://localhost:8000/api/v1/staff/status/offline', JSON.stringify({}));
-        } catch (error) {
-          console.error('Error in beforeunload:', error);
-        }
-      };
-
-      window.addEventListener('beforeunload', handleBeforeUnload);
-
-      // Chỉ refresh khi đang ở tab queue và có queue data
-      let refreshInterval;
-      if (activeTab === 'queue') {
-        refreshInterval = setInterval(() => {
-          loadDashboardData();
-        }, 5000); // Tăng từ 2s lên 5s để giảm flickering
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+        navigator.sendBeacon(`${apiUrl}/staff/status/offline`, JSON.stringify({}));
+        console.error('Error in beforeunload:', error);
       }
+    };
 
-      if (socket) {
-        socket.on('notification', handleNotification);
-        socket.on('ticket_update', handleTicketUpdate);
-        socket.on('new_message', handleNewMessage);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
-        socket.on('new_ticket_in_department', (data) => {
-          if (data.department_id === user.department_id) {
-            loadDashboardData();
-          }
-        });
-
-        socket.on('ticket_status_changed', (data) => {
-          if (data.department_id === user.department_id) {
-            loadDashboardData();
-          }
-        });
-      }
-
-      return () => {
-        // 🔗 Set staff as offline when component unmounts
-        const setOfflineStatus = async () => {
-          try {
-            await api.post('staff/status/offline');
-            console.log('👤 Staff set to OFFLINE');
-          } catch (error) {
-            console.error('Error setting offline status:', error);
-          }
-        };
-        setOfflineStatus();
-
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-
-        if (refreshInterval) {
-          clearInterval(refreshInterval);
-        }
-        if (socket) {
-          socket.off('notification', handleNotification);
-          socket.off('ticket_update', handleTicketUpdate);
-          socket.off('new_message', handleNewMessage);
-          socket.off('new_ticket_in_department');
-          socket.off('ticket_status_changed');
-        }
-      };
+    // Chỉ refresh khi đang ở tab queue và có queue data
+    let refreshInterval;
+    if (activeTab === 'queue') {
+      refreshInterval = setInterval(() => {
+        loadDashboardData();
+      }, 5000); // Tăng từ 2s lên 5s để giảm flickering
     }
+
+    if (socket) {
+      socket.on('notification', handleNotification);
+      socket.on('ticket_update', handleTicketUpdate);
+      socket.on('new_message', handleNewMessage);
+
+      socket.on('new_ticket_in_department', (data) => {
+        if (data.department_id === user.department_id) {
+          loadDashboardData();
+        }
+      });
+
+      socket.on('ticket_status_changed', (data) => {
+        if (data.department_id === user.department_id) {
+          loadDashboardData();
+        }
+      });
+    }
+
+    return () => {
+      // 🔗 Set staff as offline when component unmounts
+      const setOfflineStatus = async () => {
+        try {
+          await api.post('staff/status/offline');
+          console.log('👤 Staff set to OFFLINE');
+        } catch (error) {
+          console.error('Error setting offline status:', error);
+        }
+      };
+      setOfflineStatus();
+
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+      if (socket) {
+        socket.off('notification', handleNotification);
+        socket.off('ticket_update', handleTicketUpdate);
+        socket.off('new_message', handleNewMessage);
+        socket.off('new_ticket_in_department');
+        socket.off('ticket_status_changed');
+      }
+    };
+  }
   }, [user, socket, activeTab, loadDashboardData, handleNewMessage, loadChatRooms, handleNotification, handleTicketUpdate]);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-white to-blue-50 font-['Roboto',_sans-serif]">
-      {/* Header */}
-      <FadeIn className="bg-white/95 backdrop-blur-sm shadow-xl border-b border-blue-100">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <motion.div
-                whileHover={{ rotate: 5, scale: 1.05 }}
-                className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg"
-              >
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </motion.div>
-              <div>
-                <h1 className="text-2xl font-bold text-blue-900">Staff Dashboard</h1>
-                <div className="flex items-center space-x-2">
-                  <span className="text-blue-600 text-sm">{departmentInfo.name || 'Phòng Khám'}, </span>
-                  <span className="font-semibold text-gray-900" style={{ fontFamily: '"Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif' }}>
-                    {user?.full_name || user?.username || 'Nhân viên'}
-                  </span>
-                  <span className="px-3 py-1 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 text-xs rounded-full font-medium">
-                    {user?.role === 'staff' ? 'Nhân viên' :
-                      user?.role === 'manager' ? 'Quản lý' :
-                        user?.role === 'admin' ? 'Quản trị' : 'Nhân viên'}
-                  </span>
-                </div>
+return (
+  <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-white to-blue-50 font-['Roboto',_sans-serif]">
+    {/* Header */}
+    <FadeIn className="bg-white/95 backdrop-blur-sm shadow-xl border-b border-blue-100">
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <motion.div
+              whileHover={{ rotate: 5, scale: 1.05 }}
+              className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg"
+            >
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </motion.div>
+            <div>
+              <h1 className="text-2xl font-bold text-blue-900">Staff Dashboard</h1>
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-600 text-sm">{departmentInfo.name || 'Phòng Khám'}, </span>
+                <span className="font-semibold text-gray-900" style={{ fontFamily: '"Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif' }}>
+                  {user?.full_name || user?.username || 'Nhân viên'}
+                </span>
+                <span className="px-3 py-1 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 text-xs rounded-full font-medium">
+                  {user?.role === 'staff' ? 'Nhân viên' :
+                    user?.role === 'manager' ? 'Quản lý' :
+                      user?.role === 'admin' ? 'Quản trị' : 'Nhân viên'}
+                </span>
               </div>
             </div>
+          </div>
 
-            <div className="flex items-center space-x-4">
-              {/* WebSocket Status Indicator */}
+          <div className="flex items-center space-x-4">
+            {/* WebSocket Status Indicator */}
+            <motion.div
+              className="flex items-center space-x-2 px-3 py-2 rounded-full bg-white/80 backdrop-blur border border-gray-200 shadow-sm"
+              whileHover={{ scale: 1.05 }}
+            >
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+              <span className={`text-xs font-medium ${isConnected ? 'text-green-700' : 'text-red-700'}`}>
+                {isConnected ? 'Kết nối' : 'Offline'}
+              </span>
+            </motion.div>
+
+            <motion.div className="relative" whileHover={{ scale: 1.05 }}>
               <motion.div
-                className="flex items-center space-x-2 px-3 py-2 rounded-full bg-white/80 backdrop-blur border border-gray-200 shadow-sm"
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.1 }}
+                onClick={handleNotificationClick}
+                className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center cursor-pointer shadow-lg"
               >
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
-                <span className={`text-xs font-medium ${isConnected ? 'text-green-700' : 'text-red-700'}`}>
-                  {isConnected ? 'Kết nối' : 'Offline'}
+                <span className="text-lg">🔔</span>
+              </motion.div>
+              {notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+                  {notifications.length}
                 </span>
-              </motion.div>
+              )}
+            </motion.div>
 
-              <motion.div className="relative" whileHover={{ scale: 1.05 }}>
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  onClick={handleNotificationClick}
-                  className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center cursor-pointer shadow-lg"
-                >
-                  <span className="text-lg">🔔</span>
-                </motion.div>
-                {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
-                    {notifications.length}
-                  </span>
-                )}
-              </motion.div>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleLogoutClick}
-                className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all"
-              >
-                Đăng xuất
-              </motion.button>
-            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleLogoutClick}
+              className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all"
+            >
+              Đăng xuất
+            </motion.button>
           </div>
         </div>
-      </FadeIn>
+      </div>
+    </FadeIn>
 
-      {/* Navigation Tabs */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="flex space-x-4 overflow-x-auto pb-2">
-          <TabButton
-            active={activeTab === 'queue'}
-            onClick={() => setActiveTab('queue')}
-            icon="👥"
-            text="Quản lý hàng đợi"
-          />
-          <TabButton
-            active={activeTab === 'shift'}
-            onClick={() => setActiveTab('shift')}
-            icon="🕒"
-            text="Ca làm việc"
-          />
-          <TabButton
-            active={activeTab === 'ai-helper'}
-            onClick={() => setActiveTab('ai-helper')}
-            icon="🤖"
-            text="AI Helper"
-          />
-          <TabButton
-            active={activeTab === 'performance'}
-            onClick={() => setActiveTab('performance')}
-            icon="📊"
-            text="Hiệu suất"
-          />
-        </div>
+    {/* Navigation Tabs */}
+    <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="flex space-x-4 overflow-x-auto pb-2">
+        <TabButton
+          active={activeTab === 'queue'}
+          onClick={() => setActiveTab('queue')}
+          icon="👥"
+          text="Quản lý hàng đợi"
+        />
+        <TabButton
+          active={activeTab === 'shift'}
+          onClick={() => setActiveTab('shift')}
+          icon="🕒"
+          text="Ca làm việc"
+        />
+        <TabButton
+          active={activeTab === 'ai-helper'}
+          onClick={() => setActiveTab('ai-helper')}
+          icon="🤖"
+          text="AI Helper"
+        />
+        <TabButton
+          active={activeTab === 'performance'}
+          onClick={() => setActiveTab('performance')}
+          icon="📊"
+          text="Hiệu suất"
+        />
+      </div>
 
 
-        {/* Main Content */}
-        <div className="mt-6">
-          <AnimatePresence mode="wait">
-            {/* Queue Management Tab */}
-            {activeTab === 'queue' && (
-              <motion.div
-                key="queue"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <FadeIn className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
-                  <h2 className="text-3xl font-bold text-blue-900 mb-8 flex items-center">
-                    <span className="text-4xl mr-3">📋</span>
-                    Quản lý hàng đợi
-                  </h2>
+      {/* Main Content */}
+      <div className="mt-6">
+        <AnimatePresence mode="wait">
+          {/* Queue Management Tab */}
+          {activeTab === 'queue' && (
+            <motion.div
+              key="queue"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <FadeIn className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
+                <h2 className="text-3xl font-bold text-blue-900 mb-8 flex items-center">
+                  <span className="text-4xl mr-3">📋</span>
+                  Quản lý hàng đợi
+                </h2>
 
-                  {(() => {
-                    // Helper variables để tránh gọi find() nhiều lần
-                    const waitingTickets = queueData.filter(ticket => ticket.status === 'waiting');
-                    const calledTickets = queueData.filter(ticket => ticket.status === 'called');
-                    const currentServedTicket = calledTickets[0]; // Chỉ có thể có 1 ticket called
+                {(() => {
+                  // Helper variables để tránh gọi find() nhiều lần
+                  const waitingTickets = queueData.filter(ticket => ticket.status === 'waiting');
+                  const calledTickets = queueData.filter(ticket => ticket.status === 'called');
+                  const currentServedTicket = calledTickets[0]; // Chỉ có thể có 1 ticket called
 
-                    return (
-                      <>
-                        {/* Status Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                          <ScaleIn delay={0.2} className="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
-                            <div className="flex items-center justify-between mb-2">
-                              <h3 className="text-sm font-bold text-yellow-900">Số chờ</h3>
-                              <span className="text-lg">⏳</span>
+                  return (
+                    <>
+                      {/* Status Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <ScaleIn delay={0.2} className="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-bold text-yellow-900">Số chờ</h3>
+                            <span className="text-lg">⏳</span>
+                          </div>
+                          <div className="text-xl font-bold text-yellow-600">
+                            {isInitialLoad ? (
+                              <div className="h-6 bg-yellow-200 rounded animate-pulse w-8"></div>
+                            ) : waitingTickets.length}
+                          </div>
+                          <p className="text-yellow-700 mt-1 text-xs">khách đang chờ</p>
+                        </ScaleIn>
+
+                        <ScaleIn delay={0.3} className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-bold text-blue-900">Đã xử lý</h3>
+                            <span className="text-lg">✨</span>
+                          </div>
+                          <div className="text-xl font-bold text-blue-600">
+                            {isInitialLoad ? (
+                              <div className="h-6 bg-blue-200 rounded animate-pulse w-8"></div>
+                            ) : (overviewStats.completed_today || 0)}
+                          </div>
+                          <p className="text-blue-700 mt-1 text-xs">hôm nay</p>
+                        </ScaleIn>
+
+                        <ScaleIn delay={0.4} className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-bold text-purple-900">Đánh giá</h3>
+                            <span className="text-lg">⭐</span>
+                          </div>
+                          <div className="text-xl font-bold text-purple-600">
+                            {isInitialLoad ? (
+                              <div className="h-6 bg-purple-200 rounded animate-pulse w-12"></div>
+                            ) : `${(overviewStats.average_rating || 0).toFixed(1)}/5`}
+                          </div>
+                          <p className="text-purple-700 mt-1 text-xs">trung bình</p>
+                        </ScaleIn>
+                      </div>
+
+                      {/* Current Ticket (if any) */}
+                      {currentServedTicket && (
+                        <FadeIn className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-2xl p-6 mb-6">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center">
+                                <span className="text-2xl mr-2">🎫</span>
+                                Đang phục vụ: {currentServedTicket.ticket_number}
+                              </h3>
+                              <p className="text-gray-700">
+                                <strong>Khách hàng:</strong> {currentServedTicket.customer_name}
+                              </p>
+                              <p className="text-gray-700">
+                                <strong>Dịch vụ:</strong> {currentServedTicket.service_name}
+                              </p>
+                              <p className="text-gray-600 text-sm mt-1">
+                                <strong>Được gọi lúc:</strong> {currentServedTicket.called_at ? new Date(currentServedTicket.called_at).toLocaleTimeString() : 'Chưa xác định'}
+                              </p>
                             </div>
-                            <div className="text-xl font-bold text-yellow-600">
-                              {isInitialLoad ? (
-                                <div className="h-6 bg-yellow-200 rounded animate-pulse w-8"></div>
-                              ) : waitingTickets.length}
+                            <div className="flex flex-col gap-3">
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => completeTicket()}
+                                disabled={isInitialLoad}
+                                className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all disabled:bg-gray-400"
+                              >
+                                ✅ Hoàn thành phục vụ
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => cancelTicket()}
+                                disabled={isInitialLoad}
+                                className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all disabled:bg-gray-400"
+                              >
+                                ❌ Hủy khách
+                              </motion.button>
                             </div>
-                            <p className="text-yellow-700 mt-1 text-xs">khách đang chờ</p>
-                          </ScaleIn>
+                          </div>
+                        </FadeIn>
+                      )}
+                    </>
+                  );
+                })()}
 
-                          <ScaleIn delay={0.3} className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-                            <div className="flex items-center justify-between mb-2">
-                              <h3 className="text-sm font-bold text-blue-900">Đã xử lý</h3>
-                              <span className="text-lg">✨</span>
-                            </div>
-                            <div className="text-xl font-bold text-blue-600">
-                              {isInitialLoad ? (
-                                <div className="h-6 bg-blue-200 rounded animate-pulse w-8"></div>
-                              ) : (overviewStats.completed_today || 0)}
-                            </div>
-                            <p className="text-blue-700 mt-1 text-xs">hôm nay</p>
-                          </ScaleIn>
-
-                          <ScaleIn delay={0.4} className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                            <div className="flex items-center justify-between mb-2">
-                              <h3 className="text-sm font-bold text-purple-900">Đánh giá</h3>
-                              <span className="text-lg">⭐</span>
-                            </div>
-                            <div className="text-xl font-bold text-purple-600">
-                              {isInitialLoad ? (
-                                <div className="h-6 bg-purple-200 rounded animate-pulse w-12"></div>
-                              ) : `${(overviewStats.average_rating || 0).toFixed(1)}/5`}
-                            </div>
-                            <p className="text-purple-700 mt-1 text-xs">trung bình</p>
-                          </ScaleIn>
-                        </div>
-
-                        {/* Current Ticket (if any) */}
-                        {currentServedTicket && (
-                          <FadeIn className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-2xl p-6 mb-6">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center">
-                                  <span className="text-2xl mr-2">🎫</span>
-                                  Đang phục vụ: {currentServedTicket.ticket_number}
-                                </h3>
-                                <p className="text-gray-700">
-                                  <strong>Khách hàng:</strong> {currentServedTicket.customer_name}
-                                </p>
-                                <p className="text-gray-700">
-                                  <strong>Dịch vụ:</strong> {currentServedTicket.service_name}
-                                </p>
-                                <p className="text-gray-600 text-sm mt-1">
-                                  <strong>Được gọi lúc:</strong> {currentServedTicket.called_at ? new Date(currentServedTicket.called_at).toLocaleTimeString() : 'Chưa xác định'}
-                                </p>
-                              </div>
-                              <div className="flex flex-col gap-3">
-                                <motion.button
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  onClick={() => completeTicket()}
-                                  disabled={isInitialLoad}
-                                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all disabled:bg-gray-400"
-                                >
-                                  ✅ Hoàn thành phục vụ
-                                </motion.button>
-                                <motion.button
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  onClick={() => cancelTicket()}
-                                  disabled={isInitialLoad}
-                                  className="px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all disabled:bg-gray-400"
-                                >
-                                  ❌ Hủy khách
-                                </motion.button>
-                              </div>
-                            </div>
-                          </FadeIn>
-                        )}
-                      </>
-                    );
-                  })()}
-
-                  {/* Queue Table */}
-                  <FadeIn className="bg-white rounded-xl border border-blue-100 overflow-hidden shadow-md">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gradient-to-r from-blue-50 to-blue-100 text-blue-900">
+                {/* Queue Table */}
+                <FadeIn className="bg-white rounded-xl border border-blue-100 overflow-hidden shadow-md">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gradient-to-r from-blue-50 to-blue-100 text-blue-900">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider">STT</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider">Dịch vụ</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider">Trạng thái</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider">Thời gian chờ</th>
+                          <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {isInitialLoad ? (
+                          // Skeleton Loading cho table
+                          [...Array(3)].map((_, i) => (
+                            <tr key={i} className="animate-pulse">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="h-4 bg-gray-200 rounded w-16"></div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="h-4 bg-gray-200 rounded w-24"></div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="h-4 bg-gray-200 rounded w-20"></div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="h-4 bg-gray-200 rounded w-20"></div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex space-x-2">
+                                  <div className="h-8 bg-gray-200 rounded w-16"></div>
+                                  <div className="h-8 bg-gray-200 rounded w-20"></div>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : queueData.length === 0 ? (
                           <tr>
-                            <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider">STT</th>
-                            <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider">Dịch vụ</th>
-                            <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider">Trạng thái</th>
-                            <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider">Thời gian chờ</th>
-                            <th className="px-6 py-4 text-left text-xs font-medium uppercase tracking-wider">Thao tác</th>
+                            <td colSpan={5} className="px-6 py-16 text-center">
+                              <div className="text-4xl mb-2">📭</div>
+                              <p className="text-gray-500">Không có khách hàng đang chờ</p>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {isInitialLoad ? (
-                            // Skeleton Loading cho table
-                            [...Array(3)].map((_, i) => (
-                              <tr key={i} className="animate-pulse">
+                        ) : (
+                          queueData.map((ticket) => {
+                            const isWaiting = ticket.status === 'waiting';
+                            const isCalled = ticket.status === 'called';
+
+                            return (
+                              <tr
+                                key={ticket.id}
+                                className={`transition-colors ${isCalled
+                                  ? 'bg-green-50 border-l-4 border-green-500'
+                                  : 'hover:bg-blue-50'
+                                  }`}
+                              >
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                                  <span className={`font-semibold ${isCalled ? 'text-green-700' : 'text-gray-900'
+                                    }`}>
+                                    {ticket.ticket_number}
+                                  </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="h-4 bg-gray-200 rounded w-24"></div>
+                                  <span className={isCalled ? 'text-green-700' : 'text-gray-900'}>
+                                    {ticket.service_name}
+                                  </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="h-4 bg-gray-200 rounded w-20"></div>
+                                  {isCalled ? (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      🎯 Đang phục vụ
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                      ⏳ Đang chờ
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="h-4 bg-gray-200 rounded w-20"></div>
+                                  <RealTimeCounter createdAt={ticket.created_at} ticketId={ticket.id} />
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="flex space-x-2">
-                                    <div className="h-8 bg-gray-200 rounded w-16"></div>
-                                    <div className="h-8 bg-gray-200 rounded w-20"></div>
+                                    {/* Nút Gọi - chỉ hiển thị cho ticket waiting và khi không có currentTicket */}
+                                    {isWaiting && !currentTicket && (
+                                      <button
+                                        onClick={() => callNextTicket(ticket)}
+                                        className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                                      >
+                                        📢 Gọi
+                                      </button>
+                                    )}
+
+                                    {/* Nút Hoàn thành - chỉ hiển thị cho ticket called */}
+                                    {isCalled && (
+                                      <button
+                                        onClick={() => completeTicket(ticket)}
+                                        className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+                                      >
+                                        ✅ Hoàn thành
+                                      </button>
+                                    )}
+
+                                    {/* Nút Hủy - hiển thị cho cả waiting và called */}
+                                    <button
+                                      onClick={() => cancelTicket(ticket)}
+                                      className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
+                                    >
+                                      ❌ Hủy
+                                    </button>
                                   </div>
                                 </td>
                               </tr>
-                            ))
-                          ) : queueData.length === 0 ? (
-                            <tr>
-                              <td colSpan={5} className="px-6 py-16 text-center">
-                                <div className="text-4xl mb-2">📭</div>
-                                <p className="text-gray-500">Không có khách hàng đang chờ</p>
-                              </td>
-                            </tr>
-                          ) : (
-                            queueData.map((ticket) => {
-                              const isWaiting = ticket.status === 'waiting';
-                              const isCalled = ticket.status === 'called';
-
-                              return (
-                                <tr
-                                  key={ticket.id}
-                                  className={`transition-colors ${isCalled
-                                    ? 'bg-green-50 border-l-4 border-green-500'
-                                    : 'hover:bg-blue-50'
-                                    }`}
-                                >
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`font-semibold ${isCalled ? 'text-green-700' : 'text-gray-900'
-                                      }`}>
-                                      {ticket.ticket_number}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={isCalled ? 'text-green-700' : 'text-gray-900'}>
-                                      {ticket.service_name}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    {isCalled ? (
-                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        🎯 Đang phục vụ
-                                      </span>
-                                    ) : (
-                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                        ⏳ Đang chờ
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <RealTimeCounter createdAt={ticket.created_at} ticketId={ticket.id} />
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex space-x-2">
-                                      {/* Nút Gọi - chỉ hiển thị cho ticket waiting và khi không có currentTicket */}
-                                      {isWaiting && !currentTicket && (
-                                        <button
-                                          onClick={() => callNextTicket(ticket)}
-                                          className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
-                                        >
-                                          📢 Gọi
-                                        </button>
-                                      )}
-
-                                      {/* Nút Hoàn thành - chỉ hiển thị cho ticket called */}
-                                      {isCalled && (
-                                        <button
-                                          onClick={() => completeTicket(ticket)}
-                                          className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
-                                        >
-                                          ✅ Hoàn thành
-                                        </button>
-                                      )}
-
-                                      {/* Nút Hủy - hiển thị cho cả waiting và called */}
-                                      <button
-                                        onClick={() => cancelTicket(ticket)}
-                                        className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
-                                      >
-                                        ❌ Hủy
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </FadeIn>
-
-                  {/* Queue Actions */}
-                  {(() => {
-                    const waitingCount = queueData.filter(ticket => ticket.status === 'waiting').length;
-                    const calledCount = queueData.filter(ticket => ticket.status === 'called').length;
-                    const hasCalledTicket = calledCount > 0;
-
-                    return (
-                      <div className="flex flex-wrap items-center justify-between mt-6 gap-4">
-                        <div className="flex gap-4">
-                          <div className="bg-yellow-100 rounded-lg px-4 py-2 text-sm border border-yellow-200">
-                            <span className="font-semibold text-yellow-800">Đang chờ:</span>
-                            <span className="text-yellow-900 ml-1">{waitingCount} khách</span>
-                          </div>
-                          <div className="bg-green-100 rounded-lg px-4 py-2 text-sm border border-green-200">
-                            <span className="font-semibold text-green-800">Đang phục vụ:</span>
-                            <span className="text-green-900 ml-1">{calledCount} khách</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-4">
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={callNextTicket}
-                            disabled={isInitialLoad || hasCalledTicket}
-                            className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${hasCalledTicket || isInitialLoad
-                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                              : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:shadow-xl'
-                              }`}
-                          >
-                            {isInitialLoad ? '⏳ Đang tải...' : '📢 Gọi khách tiếp theo'}
-                          </motion.button>
-
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => completeTicket()}
-                            disabled={isInitialLoad || !hasCalledTicket}
-                            className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${!hasCalledTicket || isInitialLoad
-                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                              : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:shadow-xl'
-                              }`}
-                          >
-                            ✅ Hoàn thành phục vụ
-                          </motion.button>
-
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => cancelTicket()}
-                            disabled={isInitialLoad || !hasCalledTicket}
-                            className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${!hasCalledTicket || isInitialLoad
-                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                              : 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-xl'
-                              }`}
-                          >
-                            ❌ Hủy khách
-                          </motion.button>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </FadeIn>
-              </motion.div>
-            )}
-
-            {/* Shift Management Tab */}
-            {activeTab === 'shift' && (
-              <motion.div
-                key="shift"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <ScheduleManagement role="staff" staffId={user?.id} />
-              </motion.div>
-            )}
-
-            {/* AI Helper Tab */}
-
-            {activeTab === 'ai-helper' && (
-              <motion.div
-                key="ai-helper"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <FadeIn className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8 h-[600px]">
-                  <AIHelper role="staff" />
-                </FadeIn>
-              </motion.div>
-            )}
-
-            {/* Performance Tab */}
-            {activeTab === 'performance' && (
-              <motion.div
-                key="performance"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <FadeIn className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
-                  <h2 className="text-3xl font-bold text-blue-900 mb-8 flex items-center">
-                    <span className="text-4xl mr-3">📊</span>
-                    Hiệu suất làm việc
-                  </h2>
-
-                  {/* Today's Stats */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <ScaleIn delay={0.1} className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-green-900">Vé đã phục vụ</h3>
-                        <span className="text-2xl">🎫</span>
-                      </div>
-                      <div className="text-3xl font-bold text-green-600 mb-2">
-                        {performanceData?.todayStats?.ticketsServed || 0}
-                      </div>
-                      <p className="text-green-700 text-sm">vé hôm nay</p>
-                    </ScaleIn>
-
-                    <ScaleIn delay={0.2} className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-red-900">Khiếu nại</h3>
-                        <span className="text-2xl">🚩</span>
-                      </div>
-                      <div className="text-3xl font-bold text-red-600 mb-2">
-                        {performanceData?.todayStats?.complaints || 0}
-                      </div>
-                      <p className="text-red-700 text-sm">vụ hôm nay</p>
-                    </ScaleIn>
-
-                    <ScaleIn delay={0.3} className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-purple-900">Đánh giá TB</h3>
-                        <span className="text-2xl">⭐</span>
-                      </div>
-                      <div className="text-3xl font-bold text-purple-600 mb-2">
-                        {(performanceData?.todayStats?.avgRating || 0).toFixed(1)}/5
-                      </div>
-                      <p className="text-purple-700 text-sm">từ khách hàng</p>
-                    </ScaleIn>
-                  </div>
-
-                  {/* Ranking */}
-                  <FadeIn className="bg-gradient-to-r from-yellow-50 to-orange-100 rounded-xl p-6 border border-orange-200 mb-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-xl font-bold text-orange-900 mb-2">Xếp hạng</h3>
-                        <p className="text-orange-700">Bạn đang đứng thứ {performanceData.rankingPosition} trong {performanceData.totalStaff} nhân viên</p>
-                        <p className="text-orange-600 text-sm mt-1">
-                          Dựa trên: Đánh giá TB → Khiếu nại (ít hơn)
-                        </p>
-                      </div>
-                      <div className="text-6xl">
-                        {performanceData.rankingPosition === 1 ? '🥇' :
-                          performanceData.rankingPosition === 2 ? '🥈' :
-                            performanceData.rankingPosition === 3 ? '🥉' : '📊'}
-                      </div>
-                    </div>
-                  </FadeIn>
-
-                  {/* Performance Charts */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Biểu đồ cột - Tickets theo ngày VỚI DỮ LIỆU THẬT TỪ DATABASE */}
-                    <FadeIn className="bg-white rounded-xl border border-gray-200 p-6">
-                      <h3 className="text-lg font-bold text-gray-900 mb-4">📊 Vé phục vụ 7 ngày qua</h3>
-                      <div className="space-y-3">
-                        {/* SỬ DỤNG DỮ LIỆU THẬT TỪ API staff/performance/weekly */}
-                        {(performanceData?.weeklyChart || []).length > 0 ? (
-                          performanceData.weeklyChart.map((item, index) => (
-                            <div key={item.day} className="flex items-center space-x-3">
-                              <span className="text-sm w-8 font-medium text-gray-600">{item.day}</span>
-                              <div className="flex-1 flex items-center space-x-2">
-                                {/* Tickets bar */}
-                                <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
-                                  <div
-                                    className="bg-gradient-to-r from-blue-400 to-blue-600 h-6 rounded-full flex items-center justify-center transition-all duration-1000"
-                                    style={{ width: `${Math.min((item.tickets || 0) * 6, 100)}%` }}
-                                  >
-                                    <span className="text-white text-xs font-semibold">{item.tickets || 0}</span>
-                                  </div>
-                                </div>
-                                {/* Complaints indicator */}
-                                {(item.complaints || 0) > 0 && (
-                                  <div className="flex items-center space-x-1">
-                                    <span className="text-red-500 text-sm">🚩</span>
-                                    <span className="text-red-600 text-xs font-semibold">{item.complaints}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          // Fallback nếu không có dữ liệu
-                          <div className="text-center text-gray-500 py-4">
-                            <p>Chưa có dữ liệu hiệu suất</p>
-                          </div>
+                            );
+                          })
                         )}
-                      </div>
-                      <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                        <span>📈 Vé phục vụ</span>
-                        <span>🚩 Khiếu nại</span>
-                      </div>
-                    </FadeIn>
-
-                    {/* Biểu đồ tròn - Rating distribution */}
-                    <FadeIn className="bg-white rounded-xl border border-gray-200 p-6">
-                      <h3 className="text-lg font-bold text-gray-900 mb-4">⭐ Phân bố đánh giá</h3>
-                      <div className="flex items-center justify-center space-x-8">
-                        {/* Donut chart */}
-                        <div className="relative w-32 h-32">
-                          <svg className="w-32 h-32 transform -rotate-90">
-                            <circle cx="64" cy="64" r="50" stroke="#e5e7eb" strokeWidth="12" fill="transparent" />
-                            <circle
-                              cx="64" cy="64" r="50"
-                              stroke="url(#gradient)"
-                              strokeWidth="12"
-                              fill="transparent"
-                              strokeDasharray={`${(performanceData?.todayStats?.avgRating || 0) * 62.8} 314`}
-                              className="transition-all duration-1000"
-                            />
-                            <defs>
-                              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#fbbf24" />
-                                <stop offset="100%" stopColor="#f59e0b" />
-                              </linearGradient>
-                            </defs>
-                          </svg>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center">
-                              <div className="text-2xl font-bold text-yellow-600">
-                                {performanceData?.todayStats?.avgRating || '0.0'}
-                              </div>
-                              <div className="text-xs text-gray-500">/ 5.0</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Rating breakdown */}
-                        <div className="space-y-2">
-                          {(performanceData?.ratingDistribution || [
-                            { stars: 5, count: 0, color: 'bg-green-400' },
-                            { stars: 4, count: 0, color: 'bg-yellow-400' },
-                            { stars: 3, count: 0, color: 'bg-orange-400' },
-                            { stars: 2, count: 0, color: 'bg-red-400' },
-                            { stars: 1, count: 0, color: 'bg-gray-400' }
-                          ]).map(item => (
-                            <div key={item.stars} className="flex items-center space-x-2 text-sm">
-                              <span className="w-8 text-gray-600">{item.stars}⭐</span>
-                              <div className="w-16 h-3 bg-gray-200 rounded-full">
-                                <div
-                                  className={`h-3 rounded-full ${item.color} transition-all duration-1000`}
-                                  style={{ width: `${item.count * 4}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-gray-500 text-xs w-6">{item.count}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </FadeIn>
+                      </tbody>
+                    </table>
                   </div>
                 </FadeIn>
-              </motion.div>
-            )}
 
+                {/* Queue Actions */}
+                {(() => {
+                  const waitingCount = queueData.filter(ticket => ticket.status === 'waiting').length;
+                  const calledCount = queueData.filter(ticket => ticket.status === 'called').length;
+                  const hasCalledTicket = calledCount > 0;
 
-            {/* Old Settings Tab - Removed */}
-            {false && activeTab === 'settings' && (
-              <motion.div
-                key="settings"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <FadeIn className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
-                  <h2 className="text-3xl font-bold text-blue-900 mb-8 flex items-center">
-                    <span className="text-4xl mr-3">⚙️</span>
-                    Cài đặt
-                  </h2>
+                  return (
+                    <div className="flex flex-wrap items-center justify-between mt-6 gap-4">
+                      <div className="flex gap-4">
+                        <div className="bg-yellow-100 rounded-lg px-4 py-2 text-sm border border-yellow-200">
+                          <span className="font-semibold text-yellow-800">Đang chờ:</span>
+                          <span className="text-yellow-900 ml-1">{waitingCount} khách</span>
+                        </div>
+                        <div className="bg-green-100 rounded-lg px-4 py-2 text-sm border border-green-200">
+                          <span className="font-semibold text-green-800">Đang phục vụ:</span>
+                          <span className="text-green-900 ml-1">{calledCount} khách</span>
+                        </div>
+                      </div>
 
-                  <div className="space-y-6">
-                    {/* Theme Settings */}
-                    <div className="bg-gray-50 rounded-xl p-6">
-                      <h3 className="text-lg font-semibold mb-4">Giao diện</h3>
-                      <div className="space-y-3">
-                        <label className="flex items-center space-x-3">
-                          <input
-                            type="radio"
-                            name="theme"
-                            checked={staffSettings.theme === 'light'}
-                            onChange={() => setStaffSettings(prev => ({ ...prev, theme: 'light' }))}
-                            className="text-blue-500"
-                          />
-                          <span>Sáng</span>
-                        </label>
-                        <label className="flex items-center space-x-3">
-                          <input
-                            type="radio"
-                            name="theme"
-                            checked={staffSettings.theme === 'dark'}
-                            onChange={() => setStaffSettings(prev => ({ ...prev, theme: 'dark' }))}
-                            className="text-blue-500"
-                          />
-                          <span>Tối</span>
-                        </label>
+                      <div className="flex flex-wrap gap-4">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={callNextTicket}
+                          disabled={isInitialLoad || hasCalledTicket}
+                          className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${hasCalledTicket || isInitialLoad
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:shadow-xl'
+                            }`}
+                        >
+                          {isInitialLoad ? '⏳ Đang tải...' : '📢 Gọi khách tiếp theo'}
+                        </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => completeTicket()}
+                          disabled={isInitialLoad || !hasCalledTicket}
+                          className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${!hasCalledTicket || isInitialLoad
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:shadow-xl'
+                            }`}
+                        >
+                          ✅ Hoàn thành phục vụ
+                        </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => cancelTicket()}
+                          disabled={isInitialLoad || !hasCalledTicket}
+                          className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${!hasCalledTicket || isInitialLoad
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-xl'
+                            }`}
+                        >
+                          ❌ Hủy khách
+                        </motion.button>
                       </div>
                     </div>
+                  );
+                })()}
+              </FadeIn>
+            </motion.div>
+          )}
 
-                    {/* Notification Settings */}
-                    <div className="bg-gray-50 rounded-xl p-6">
-                      <h3 className="text-lg font-semibold mb-4">Thông báo</h3>
+          {/* Shift Management Tab */}
+          {activeTab === 'shift' && (
+            <motion.div
+              key="shift"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ScheduleManagement role="staff" staffId={user?.id} />
+            </motion.div>
+          )}
+
+          {/* AI Helper Tab */}
+
+          {activeTab === 'ai-helper' && (
+            <motion.div
+              key="ai-helper"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <FadeIn className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8 h-[600px]">
+                <AIHelper role="staff" />
+              </FadeIn>
+            </motion.div>
+          )}
+
+          {/* Performance Tab */}
+          {activeTab === 'performance' && (
+            <motion.div
+              key="performance"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <FadeIn className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
+                <h2 className="text-3xl font-bold text-blue-900 mb-8 flex items-center">
+                  <span className="text-4xl mr-3">📊</span>
+                  Hiệu suất làm việc
+                </h2>
+
+                {/* Today's Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <ScaleIn delay={0.1} className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-green-900">Vé đã phục vụ</h3>
+                      <span className="text-2xl">🎫</span>
+                    </div>
+                    <div className="text-3xl font-bold text-green-600 mb-2">
+                      {performanceData?.todayStats?.ticketsServed || 0}
+                    </div>
+                    <p className="text-green-700 text-sm">vé hôm nay</p>
+                  </ScaleIn>
+
+                  <ScaleIn delay={0.2} className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-red-900">Khiếu nại</h3>
+                      <span className="text-2xl">🚩</span>
+                    </div>
+                    <div className="text-3xl font-bold text-red-600 mb-2">
+                      {performanceData?.todayStats?.complaints || 0}
+                    </div>
+                    <p className="text-red-700 text-sm">vụ hôm nay</p>
+                  </ScaleIn>
+
+                  <ScaleIn delay={0.3} className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-purple-900">Đánh giá TB</h3>
+                      <span className="text-2xl">⭐</span>
+                    </div>
+                    <div className="text-3xl font-bold text-purple-600 mb-2">
+                      {(performanceData?.todayStats?.avgRating || 0).toFixed(1)}/5
+                    </div>
+                    <p className="text-purple-700 text-sm">từ khách hàng</p>
+                  </ScaleIn>
+                </div>
+
+                {/* Ranking */}
+                <FadeIn className="bg-gradient-to-r from-yellow-50 to-orange-100 rounded-xl p-6 border border-orange-200 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-orange-900 mb-2">Xếp hạng</h3>
+                      <p className="text-orange-700">Bạn đang đứng thứ {performanceData.rankingPosition} trong {performanceData.totalStaff} nhân viên</p>
+                      <p className="text-orange-600 text-sm mt-1">
+                        Dựa trên: Đánh giá TB → Khiếu nại (ít hơn)
+                      </p>
+                    </div>
+                    <div className="text-6xl">
+                      {performanceData.rankingPosition === 1 ? '🥇' :
+                        performanceData.rankingPosition === 2 ? '🥈' :
+                          performanceData.rankingPosition === 3 ? '🥉' : '📊'}
+                    </div>
+                  </div>
+                </FadeIn>
+
+                {/* Performance Charts */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Biểu đồ cột - Tickets theo ngày VỚI DỮ LIỆU THẬT TỪ DATABASE */}
+                  <FadeIn className="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">📊 Vé phục vụ 7 ngày qua</h3>
+                    <div className="space-y-3">
+                      {/* SỬ DỤNG DỮ LIỆU THẬT TỪ API staff/performance/weekly */}
+                      {(performanceData?.weeklyChart || []).length > 0 ? (
+                        performanceData.weeklyChart.map((item, index) => (
+                          <div key={item.day} className="flex items-center space-x-3">
+                            <span className="text-sm w-8 font-medium text-gray-600">{item.day}</span>
+                            <div className="flex-1 flex items-center space-x-2">
+                              {/* Tickets bar */}
+                              <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
+                                <div
+                                  className="bg-gradient-to-r from-blue-400 to-blue-600 h-6 rounded-full flex items-center justify-center transition-all duration-1000"
+                                  style={{ width: `${Math.min((item.tickets || 0) * 6, 100)}%` }}
+                                >
+                                  <span className="text-white text-xs font-semibold">{item.tickets || 0}</span>
+                                </div>
+                              </div>
+                              {/* Complaints indicator */}
+                              {(item.complaints || 0) > 0 && (
+                                <div className="flex items-center space-x-1">
+                                  <span className="text-red-500 text-sm">🚩</span>
+                                  <span className="text-red-600 text-xs font-semibold">{item.complaints}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        // Fallback nếu không có dữ liệu
+                        <div className="text-center text-gray-500 py-4">
+                          <p>Chưa có dữ liệu hiệu suất</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+                      <span>📈 Vé phục vụ</span>
+                      <span>🚩 Khiếu nại</span>
+                    </div>
+                  </FadeIn>
+
+                  {/* Biểu đồ tròn - Rating distribution */}
+                  <FadeIn className="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">⭐ Phân bố đánh giá</h3>
+                    <div className="flex items-center justify-center space-x-8">
+                      {/* Donut chart */}
+                      <div className="relative w-32 h-32">
+                        <svg className="w-32 h-32 transform -rotate-90">
+                          <circle cx="64" cy="64" r="50" stroke="#e5e7eb" strokeWidth="12" fill="transparent" />
+                          <circle
+                            cx="64" cy="64" r="50"
+                            stroke="url(#gradient)"
+                            strokeWidth="12"
+                            fill="transparent"
+                            strokeDasharray={`${(performanceData?.todayStats?.avgRating || 0) * 62.8} 314`}
+                            className="transition-all duration-1000"
+                          />
+                          <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#fbbf24" />
+                              <stop offset="100%" stopColor="#f59e0b" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-yellow-600">
+                              {performanceData?.todayStats?.avgRating || '0.0'}
+                            </div>
+                            <div className="text-xs text-gray-500">/ 5.0</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Rating breakdown */}
+                      <div className="space-y-2">
+                        {(performanceData?.ratingDistribution || [
+                          { stars: 5, count: 0, color: 'bg-green-400' },
+                          { stars: 4, count: 0, color: 'bg-yellow-400' },
+                          { stars: 3, count: 0, color: 'bg-orange-400' },
+                          { stars: 2, count: 0, color: 'bg-red-400' },
+                          { stars: 1, count: 0, color: 'bg-gray-400' }
+                        ]).map(item => (
+                          <div key={item.stars} className="flex items-center space-x-2 text-sm">
+                            <span className="w-8 text-gray-600">{item.stars}⭐</span>
+                            <div className="w-16 h-3 bg-gray-200 rounded-full">
+                              <div
+                                className={`h-3 rounded-full ${item.color} transition-all duration-1000`}
+                                style={{ width: `${item.count * 4}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-gray-500 text-xs w-6">{item.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </FadeIn>
+                </div>
+              </FadeIn>
+            </motion.div>
+          )}
+
+
+          {/* Old Settings Tab - Removed */}
+          {false && activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <FadeIn className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
+                <h2 className="text-3xl font-bold text-blue-900 mb-8 flex items-center">
+                  <span className="text-4xl mr-3">⚙️</span>
+                  Cài đặt
+                </h2>
+
+                <div className="space-y-6">
+                  {/* Theme Settings */}
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold mb-4">Giao diện</h3>
+                    <div className="space-y-3">
                       <label className="flex items-center space-x-3">
                         <input
-                          type="checkbox"
-                          checked={staffSettings.notifications}
-                          onChange={(e) => setStaffSettings(prev => ({ ...prev, notifications: e.target.checked }))}
+                          type="radio"
+                          name="theme"
+                          checked={staffSettings.theme === 'light'}
+                          onChange={() => setStaffSettings(prev => ({ ...prev, theme: 'light' }))}
                           className="text-blue-500"
                         />
-                        <span>Nhận thông báo real-time</span>
+                        <span>Sáng</span>
+                      </label>
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="theme"
+                          checked={staffSettings.theme === 'dark'}
+                          onChange={() => setStaffSettings(prev => ({ ...prev, theme: 'dark' }))}
+                          className="text-blue-500"
+                        />
+                        <span>Tối</span>
                       </label>
                     </div>
-
-                    {/* Language Settings */}
-                    <div className="bg-gray-50 rounded-xl p-6">
-                      <h3 className="text-lg font-semibold mb-4">Ngôn ngữ</h3>
-                      <select
-                        value={staffSettings.language}
-                        onChange={(e) => setStaffSettings(prev => ({ ...prev, language: e.target.value }))}
-                        className="px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                      >
-                        <option value="vi">Tiếng Việt</option>
-                        <option value="en">English</option>
-                      </select>
-                    </div>
-
-                    {/* Display Settings */}
-                    <div className="bg-gray-50 rounded-xl p-6">
-                      <h3 className="text-lg font-semibold mb-4">Hiển thị</h3>
-                      <div className="space-y-3">
-                        <label className="flex items-center space-x-3">
-                          <input
-                            type="radio"
-                            name="displayMode"
-                            checked={staffSettings.displayMode === 'compact'}
-                            onChange={() => setStaffSettings(prev => ({ ...prev, displayMode: 'compact' }))}
-                            className="text-blue-500"
-                          />
-                          <span>Gọn</span>
-                        </label>
-                        <label className="flex items-center space-x-3">
-                          <input
-                            type="radio"
-                            name="displayMode"
-                            checked={staffSettings.displayMode === 'comfortable'}
-                            onChange={() => setStaffSettings(prev => ({ ...prev, displayMode: 'comfortable' }))}
-                            className="text-blue-500"
-                          />
-                          <span>Thoải mái</span>
-                        </label>
-                      </div>
-                    </div>
                   </div>
-                </FadeIn>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
 
-      {/* Modals */}
-      <AlertModal
-        isOpen={showNotificationModal}
-        onClose={() => setShowNotificationModal(false)}
-        title="Thông báo"
-        message={notificationMessage}
-        type="info"
-      />
-
-      <ConfirmModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={confirmLogout}
-        title="Xác nhận đăng xuất"
-        message="Bạn có chắc chắn muốn đăng xuất?"
-        confirmText="Đăng xuất"
-        cancelText="Hủy"
-      />
-
-      <ConfirmModal
-        isOpen={showCompleteModal}
-        onClose={() => setShowCompleteModal(false)}
-        onConfirm={confirmCompleteTicket}
-        title="Xác nhận hoàn thành"
-        message={`Hoàn thành phục vụ cho khách hàng ${ticketToComplete?.ticket_number || ''}?`}
-        confirmText="Hoàn thành"
-        cancelText="Hủy"
-      />
-
-      <ConfirmModal
-        isOpen={showCancelModal}
-        onClose={() => setShowCancelModal(false)}
-        onConfirm={confirmCancelTicket}
-        title="Xác nhận hủy vé"
-        message={`Hủy vé của khách hàng ${ticketToCancel?.ticket_number || ''}?`}
-        confirmText="Hủy vé"
-        cancelText="Quay lại"
-      />
-
-      {/* Professional Notification Modal for Staff */}
-      {showProfessionalNotificationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-gray-100"
-          >
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 text-white p-6">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                    <span className="text-2xl">🔔</span>
+                  {/* Notification Settings */}
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold mb-4">Thông báo</h3>
+                    <label className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={staffSettings.notifications}
+                        onChange={(e) => setStaffSettings(prev => ({ ...prev, notifications: e.target.checked }))}
+                        className="text-blue-500"
+                      />
+                      <span>Nhận thông báo real-time</span>
+                    </label>
                   </div>
-                  <div>
-                    <h2 className="text-2xl font-bold">Thông báo nhân viên</h2>
-                    <p className="text-blue-100">Thông báo khiếu nại và công việc</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowProfessionalNotificationModal(false)}
-                  className="text-white hover:text-blue-200 transition-colors p-2 rounded-full hover:bg-white hover:bg-opacity-20"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
 
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
-              {notifications.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-4xl">📭</span>
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">Chưa có thông báo</h3>
-                  <p className="text-gray-500">Tất cả thông báo sẽ được hiển thị tại đây</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      Thông báo gần đây ({notifications.length})
-                    </h3>
-                    <button
-                      onClick={() => setNotifications([])}
-                      className="text-sm text-gray-500 hover:text-red-600 transition-colors"
+                  {/* Language Settings */}
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold mb-4">Ngôn ngữ</h3>
+                    <select
+                      value={staffSettings.language}
+                      onChange={(e) => setStaffSettings(prev => ({ ...prev, language: e.target.value }))}
+                      className="px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
                     >
-                      Xóa tất cả
-                    </button>
+                      <option value="vi">Tiếng Việt</option>
+                      <option value="en">English</option>
+                    </select>
                   </div>
 
-                  {notifications.map((notification, index) => (
-                    <NotificationCard
-                      key={notification.id || index}
-                      notification={notification}
-                      index={index}
-                      onMarkAsRead={markNotificationAsRead}
-                    />
-                  ))}
+                  {/* Display Settings */}
+                  <div className="bg-gray-50 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold mb-4">Hiển thị</h3>
+                    <div className="space-y-3">
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="displayMode"
+                          checked={staffSettings.displayMode === 'compact'}
+                          onChange={() => setStaffSettings(prev => ({ ...prev, displayMode: 'compact' }))}
+                          className="text-blue-500"
+                        />
+                        <span>Gọn</span>
+                      </label>
+                      <label className="flex items-center space-x-3">
+                        <input
+                          type="radio"
+                          name="displayMode"
+                          checked={staffSettings.displayMode === 'comfortable'}
+                          onChange={() => setStaffSettings(prev => ({ ...prev, displayMode: 'comfortable' }))}
+                          className="text-blue-500"
+                        />
+                        <span>Thoải mái</span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-500">
-                  Cập nhật lần cuối: {new Date().toLocaleString('vi-VN')}
-                </span>
-                <button
-                  onClick={() => setShowProfessionalNotificationModal(false)}
-                  className="px-6 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all"
-                >
-                  Đóng
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
+              </FadeIn>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
-  );
+
+    {/* Modals */}
+    <AlertModal
+      isOpen={showNotificationModal}
+      onClose={() => setShowNotificationModal(false)}
+      title="Thông báo"
+      message={notificationMessage}
+      type="info"
+    />
+
+    <ConfirmModal
+      isOpen={showLogoutModal}
+      onClose={() => setShowLogoutModal(false)}
+      onConfirm={confirmLogout}
+      title="Xác nhận đăng xuất"
+      message="Bạn có chắc chắn muốn đăng xuất?"
+      confirmText="Đăng xuất"
+      cancelText="Hủy"
+    />
+
+    <ConfirmModal
+      isOpen={showCompleteModal}
+      onClose={() => setShowCompleteModal(false)}
+      onConfirm={confirmCompleteTicket}
+      title="Xác nhận hoàn thành"
+      message={`Hoàn thành phục vụ cho khách hàng ${ticketToComplete?.ticket_number || ''}?`}
+      confirmText="Hoàn thành"
+      cancelText="Hủy"
+    />
+
+    <ConfirmModal
+      isOpen={showCancelModal}
+      onClose={() => setShowCancelModal(false)}
+      onConfirm={confirmCancelTicket}
+      title="Xác nhận hủy vé"
+      message={`Hủy vé của khách hàng ${ticketToCancel?.ticket_number || ''}?`}
+      confirmText="Hủy vé"
+      cancelText="Quay lại"
+    />
+
+    {/* Professional Notification Modal for Staff */}
+    {showProfessionalNotificationModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden border border-gray-100"
+        >
+          {/* Modal Header */}
+          <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 text-white p-6">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">🔔</span>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Thông báo nhân viên</h2>
+                  <p className="text-blue-100">Thông báo khiếu nại và công việc</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowProfessionalNotificationModal(false)}
+                className="text-white hover:text-blue-200 transition-colors p-2 rounded-full hover:bg-white hover:bg-opacity-20"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+            {notifications.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-4xl">📭</span>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">Chưa có thông báo</h3>
+                <p className="text-gray-500">Tất cả thông báo sẽ được hiển thị tại đây</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Thông báo gần đây ({notifications.length})
+                  </h3>
+                  <button
+                    onClick={() => setNotifications([])}
+                    className="text-sm text-gray-500 hover:text-red-600 transition-colors"
+                  >
+                    Xóa tất cả
+                  </button>
+                </div>
+
+                {notifications.map((notification, index) => (
+                  <NotificationCard
+                    key={notification.id || index}
+                    notification={notification}
+                    index={index}
+                    onMarkAsRead={markNotificationAsRead}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Modal Footer */}
+          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500">
+                Cập nhật lần cuối: {new Date().toLocaleString('vi-VN')}
+              </span>
+              <button
+                onClick={() => setShowProfessionalNotificationModal(false)}
+                className="px-6 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    )}
+  </div>
+);
 };
 
 // Tab Button Component
