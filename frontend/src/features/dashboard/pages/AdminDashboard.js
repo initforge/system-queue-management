@@ -1,33 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardLayout from '../../../shared/components/DashboardLayout';
+import { useAdminDashboard } from '../../../shared/api';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('system');
-  const [departments, setDepartments] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [systemStats, setSystemStats] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const {
+    departments,
+    users,
+    systemStats,
+    loading,
+    error,
+    fetchDepartments,
+    fetchUsers,
+    fetchSystemStats,
+    createDepartment,
+    updateDepartment,
+    deleteDepartment,
+    createUser,
+    updateUser,
+    deleteUser
+  } = useAdminDashboard();
 
-  // Mock data functions
-  const fetchDepartments = () => setDepartments([]);
-  const fetchUsers = () => setUsers([]);
-  const fetchSystemStats = () => setSystemStats({});
-  const createDepartment = () => {};
-  const updateDepartment = () => {};
-  const deleteDepartment = () => {};
-  const createUser = () => {};
-  const updateUser = () => {};
-  const deleteUser = () => {};
-
-  // Mock WebSocket data
+  // WebSocket data placeholders (to be integrated later if needed)
   const wsConnected = false;
   const ticketCount = 0;
   const staffActivity = [];
   const criticalAlerts = [];
-  const requestSystemStats = () => {};
-  const requestStaffActivity = () => {};
+  const requestSystemStats = () => { };
+  const requestStaffActivity = () => { };
 
   useEffect(() => {
     // Fetch initial data based on active tab
@@ -40,14 +41,14 @@ const AdminDashboard = () => {
       fetchDepartments();
     }
   }, [activeTab, fetchSystemStats, fetchUsers, fetchDepartments, requestSystemStats]);
-  
+
   // Poll for staff activity when system tab is active
   useEffect(() => {
     if (activeTab === 'system' && wsConnected) {
       const intervalId = setInterval(() => {
         requestStaffActivity();
       }, 30000); // Request staff activity every 30 seconds
-      
+
       return () => clearInterval(intervalId);
     }
   }, [activeTab, wsConnected, requestStaffActivity]);
@@ -58,41 +59,38 @@ const AdminDashboard = () => {
         <h1 className="text-2xl font-bold text-gray-800 mb-6">
           Quản trị hệ thống
         </h1>
-        
+
         {/* Tab navigation */}
         <div className="mb-6 border-b border-gray-200">
           <ul className="flex flex-wrap -mb-px text-sm font-medium text-center">
             <li className="mr-2">
-              <button 
-                className={`inline-block p-4 rounded-t-lg ${
-                  activeTab === 'system' 
-                    ? 'text-blue-600 border-b-2 border-blue-600' 
-                    : 'text-gray-500 hover:text-gray-600 hover:border-gray-300'
-                }`}
+              <button
+                className={`inline-block p-4 rounded-t-lg ${activeTab === 'system'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-600 hover:border-gray-300'
+                  }`}
                 onClick={() => setActiveTab('system')}
               >
                 Thống kê hệ thống
               </button>
             </li>
             <li className="mr-2">
-              <button 
-                className={`inline-block p-4 rounded-t-lg ${
-                  activeTab === 'users' 
-                    ? 'text-blue-600 border-b-2 border-blue-600' 
-                    : 'text-gray-500 hover:text-gray-600 hover:border-gray-300'
-                }`}
+              <button
+                className={`inline-block p-4 rounded-t-lg ${activeTab === 'users'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-600 hover:border-gray-300'
+                  }`}
                 onClick={() => setActiveTab('users')}
               >
                 Quản lý người dùng
               </button>
             </li>
             <li className="mr-2">
-              <button 
-                className={`inline-block p-4 rounded-t-lg ${
-                  activeTab === 'departments' 
-                    ? 'text-blue-600 border-b-2 border-blue-600' 
-                    : 'text-gray-500 hover:text-gray-600 hover:border-gray-300'
-                }`}
+              <button
+                className={`inline-block p-4 rounded-t-lg ${activeTab === 'departments'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-600 hover:border-gray-300'
+                  }`}
                 onClick={() => setActiveTab('departments')}
               >
                 Phòng ban & Dịch vụ
@@ -100,7 +98,7 @@ const AdminDashboard = () => {
             </li>
           </ul>
         </div>
-        
+
         {/* Tab content */}
         <div className="bg-white shadow-md rounded-lg p-6">
           <AnimatePresence mode="wait">
@@ -129,7 +127,7 @@ const AdminDashboard = () => {
                     )}
                   </div>
                 </div>
-                
+
                 {criticalAlerts && criticalAlerts.length > 0 && (
                   <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
                     <h3 className="text-red-800 text-sm font-medium mb-2 flex items-center">
@@ -146,7 +144,7 @@ const AdminDashboard = () => {
                     </ul>
                   </div>
                 )}
-                
+
                 {loading.stats ? (
                   <div className="flex justify-center items-center h-40">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -171,7 +169,7 @@ const AdminDashboard = () => {
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
                       <p className="text-green-700 text-sm font-medium">Nhân viên đang làm việc</p>
                       <p className="text-3xl font-bold mt-2">
@@ -186,7 +184,7 @@ const AdminDashboard = () => {
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-lg border border-yellow-200">
                       <p className="text-yellow-700 text-sm font-medium">Thời gian chờ trung bình</p>
                       <p className="text-3xl font-bold mt-2">
@@ -202,7 +200,7 @@ const AdminDashboard = () => {
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg border border-purple-200">
                       <p className="text-purple-700 text-sm font-medium">Mức độ hài lòng</p>
                       <p className="text-3xl font-bold mt-2">
@@ -219,7 +217,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div className="bg-gray-50 rounded-lg p-6 border">
                     <h3 className="text-lg font-medium mb-4">Biểu đồ vé theo thời gian</h3>
@@ -227,7 +225,7 @@ const AdminDashboard = () => {
                       <p className="text-gray-500">Biểu đồ sẽ được hiển thị ở đây</p>
                     </div>
                   </div>
-                  
+
                   <div className="bg-gray-50 rounded-lg p-6 border">
                     <h3 className="text-lg font-medium mb-4">Phân bố theo phòng ban</h3>
                     <div className="h-64 flex items-center justify-center">
@@ -235,7 +233,7 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Live staff activity section */}
                 <div className="bg-gray-50 rounded-lg p-6 border">
                   <div className="flex justify-between items-center mb-4">
@@ -246,7 +244,7 @@ const AdminDashboard = () => {
                       </span>
                     )}
                   </div>
-                  
+
                   {staffActivity ? (
                     <div className="space-y-3">
                       {staffActivity.recentActivities && staffActivity.recentActivities.map((activity, idx) => (
@@ -258,16 +256,15 @@ const AdminDashboard = () => {
                             <p className="text-sm font-medium">{activity.action}</p>
                             <p className="text-xs text-gray-500">{activity.timestamp}</p>
                           </div>
-                          <div className={`px-2 py-1 rounded-full text-xs ${
-                            activity.status === 'success' ? 'bg-green-100 text-green-800' : 
+                          <div className={`px-2 py-1 rounded-full text-xs ${activity.status === 'success' ? 'bg-green-100 text-green-800' :
                             activity.status === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                              'bg-gray-100 text-gray-800'
+                            }`}>
                             {activity.department}
                           </div>
                         </div>
                       ))}
-                      
+
                       {(!staffActivity.recentActivities || staffActivity.recentActivities.length === 0) && (
                         <p className="text-center text-gray-500 py-6">
                           Không có hoạt động nào gần đây
@@ -282,7 +279,7 @@ const AdminDashboard = () => {
                 </div>
               </motion.div>
             )}
-            
+
             {/* Users Tab */}
             {activeTab === 'users' && (
               <motion.div
@@ -298,11 +295,11 @@ const AdminDashboard = () => {
                     <i className="fas fa-plus mr-2"></i> Thêm người dùng
                   </button>
                 </div>
-                
+
                 <div className="flex items-center mb-4 space-x-3">
                   <div className="relative flex-grow">
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Tìm kiếm người dùng..."
                       className="w-full px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
@@ -310,14 +307,14 @@ const AdminDashboard = () => {
                       <i className="fas fa-search"></i>
                     </div>
                   </div>
-                  
+
                   <select className="border rounded-lg px-4 py-2">
                     <option>Tất cả vai trò</option>
                     <option>Quản trị viên</option>
                     <option>Quản lý</option>
                     <option>Nhân viên</option>
                   </select>
-                  
+
                   <select className="border rounded-lg px-4 py-2">
                     <option>Tất cả phòng ban</option>
                     <option>Phòng CSKH</option>
@@ -325,7 +322,7 @@ const AdminDashboard = () => {
                     <option>Phòng kỹ thuật</option>
                   </select>
                 </div>
-                
+
                 {loading.users ? (
                   <div className="flex justify-center items-center h-40">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -369,7 +366,7 @@ const AdminDashboard = () => {
                                   .toUpperCase()
                                   .substring(0, 2);
                               };
-                              
+
                               // Define colors for different roles
                               const roleColors = {
                                 admin: 'bg-blue-100 text-blue-800',
@@ -383,7 +380,7 @@ const AdminDashboard = () => {
                                 manager: 'Quản lý',
                                 staff: 'Nhân viên',
                               };
-                              
+
                               const avatarColors = [
                                 'bg-blue-100 text-blue-700',
                                 'bg-green-100 text-green-700',
@@ -391,7 +388,7 @@ const AdminDashboard = () => {
                                 'bg-purple-100 text-purple-700',
                                 'bg-red-100 text-red-700',
                               ];
-                              
+
                               return (
                                 <tr key={user.id || index}>
                                   <td className="px-6 py-4 whitespace-nowrap">
@@ -440,14 +437,14 @@ const AdminDashboard = () => {
                         </tbody>
                       </table>
                     </div>
-                    
+
                     <div className="flex justify-between items-center mt-6">
                       <div className="text-sm text-gray-500">
-                        {users && users.length > 0 
-                          ? `Hiển thị 1 - ${users.length} của ${users.length} người dùng` 
+                        {users && users.length > 0
+                          ? `Hiển thị 1 - ${users.length} của ${users.length} người dùng`
                           : 'Không có người dùng nào'}
                       </div>
-                      
+
                       {users && users.length > 0 && (
                         <div className="flex space-x-2">
                           <button className="px-3 py-1 border rounded-md bg-gray-100">
@@ -466,7 +463,7 @@ const AdminDashboard = () => {
                 )}
               </motion.div>
             )}
-            
+
             {/* Departments Tab */}
             {activeTab === 'departments' && (
               <motion.div
@@ -482,7 +479,7 @@ const AdminDashboard = () => {
                     <i className="fas fa-plus mr-2"></i> Thêm phòng ban
                   </button>
                 </div>
-                
+
                 {loading.departments ? (
                   <div className="flex justify-center items-center h-40">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
