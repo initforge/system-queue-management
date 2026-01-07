@@ -85,13 +85,8 @@ const ManagerDashboard = () => {
         return;
       }
 
-      const response = await fetch(`/api/v1/manager/complaints/${complaintId}/resolve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ response: resolution })
+      const response = await api.post(`manager/complaints/${complaintId}/resolve`, {
+        response: resolution
       });
 
       if (response.ok) {
@@ -162,14 +157,7 @@ const ManagerDashboard = () => {
         complaint_content: complaintData.content
       };
 
-      const response = await fetch('/api/v1/manager/send-staff-notification', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(notificationData)
-      });
+      const response = await api.post('manager/send-staff-notification', notificationData);
 
       if (response.ok) {
         const responseData = await response.json();
@@ -207,25 +195,17 @@ const ManagerDashboard = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch('/api/v1/manager/manager-info', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const data = await api.get('manager/manager-info');
 
-      if (response.ok) {
-        const data = await response.json();
-        setComplaintStats({
-          waiting: data.waiting_complaints || 0,
-          completed: data.completed_complaints || 0
-        });
-        // Filter out completed complaints as requested
-        const activeComplaints = (data.recent_complaints || []).filter(
-          complaint => complaint.status !== 'completed'
-        );
-        setComplaintsList(activeComplaints);
-      }
+      setComplaintStats({
+        waiting: data.waiting_complaints || 0,
+        completed: data.completed_complaints || 0
+      });
+      // Filter out completed complaints as requested
+      const activeComplaints = (data.recent_complaints || []).filter(
+        complaint => complaint.status !== 'completed'
+      );
+      setComplaintsList(activeComplaints);
     } catch (error) {
       console.error("Error loading complaints:", error);
     }
@@ -324,68 +304,34 @@ const ManagerDashboard = () => {
         return;
       }
 
-      // Load manager info and complaints data using fetch
-      const managerResponse = await fetch('/api/v1/manager/manager-info', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      // Load manager info and complaints data using ApiClient
+      const managerData = await api.get('manager/manager-info');
+      console.log('Manager data loaded:', managerData);
+      setManagerName(managerData.manager_name || 'Manager');
+      setComplaintStats({
+        waiting: managerData.waiting_complaints || 0,
+        completed: managerData.completed_complaints || 0
       });
+      setComplaintsList(managerData.recent_complaints || []);
 
-      if (managerResponse.ok) {
-        const managerData = await managerResponse.json();
-        console.log('Manager data loaded:', managerData);
-        setManagerName(managerData.manager_name || 'Manager');
-        setComplaintStats({
-          waiting: managerData.waiting_complaints || 0,
-          completed: managerData.completed_complaints || 0
+      // Cập nhật dashboard stats tổng hợp từ backend
+      if (managerData.dashboard_stats) {
+        setDashboardStats({
+          onlineStaff: managerData.dashboard_stats.online_staff || 0,
+          activeTickets: managerData.dashboard_stats.active_tickets || 0,
+          averagePerformance: managerData.dashboard_stats.average_performance || 0
         });
-        setComplaintsList(managerData.recent_complaints || []);
-
-        // Cập nhật dashboard stats tổng hợp từ backend
-        if (managerData.dashboard_stats) {
-          setDashboardStats({
-            onlineStaff: managerData.dashboard_stats.online_staff || 0,
-            activeTickets: managerData.dashboard_stats.active_tickets || 0,
-            averagePerformance: managerData.dashboard_stats.average_performance || 0
-          });
-        }
-      } else if (managerResponse.status === 401) {
-        console.error('Authentication failed, redirecting to login');
-        logout();
-        return;
-      } else {
-        console.error('Failed to load manager data:', managerResponse.status);
       }
 
-      // Load staff list using fetch  
-      const staffResponse = await fetch('/api/v1/manager/staff', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      let staffArray = [];
-      if (staffResponse.ok) {
-        const staffData = await staffResponse.json();
-        staffArray = Array.isArray(staffData) ? staffData :
-          (staffData.data || staffData.value || []);
-      } else if (staffResponse.status === 401) {
-        console.error('Authentication failed while loading staff, redirecting to login');
-        logout();
-        return;
-      } else {
-        console.error('Failed to load staff data:', staffResponse.status);
-      }
+      // Load staff list using ApiClient
+      const staffData = await api.get('manager/staff');
+      const staffArray = Array.isArray(staffData) ? staffData : (staffData.data || staffData.value || []);
       setStaffList(staffArray);
-
-      // Dashboard stats đã được cập nhật từ manager-info API (không cần tính từ staff data nữa)
 
     } catch (error) {
       console.error("Error loading dashboard data:", error);
       // If error contains authentication issues, redirect to login
-      if (error.message && error.message.includes('401')) {
+      if (error.response?.status === 401 || (error.message && error.message.includes('401'))) {
         logout();
       }
     } finally {

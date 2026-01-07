@@ -105,7 +105,9 @@ const PersonalSchedule = () => {
     const token = localStorage.getItem('token');
     if (!token || !user) return;
 
-    const wsUrl = `ws://${window.location.hostname}:8000/api/v1/schedule/ws/${user.id}?token=${token}`;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsBaseUrl = process.env.REACT_APP_WS_URL || `${wsProtocol}//${window.location.hostname}:8000/ws`;
+    const wsUrl = `${wsBaseUrl}/api/v1/schedule/ws/${user.id}?token=${token}`;
     let ws;
     let reconnectTimeout;
 
