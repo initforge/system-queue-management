@@ -7,7 +7,7 @@ import scheduleAPI from '../../../shared/services/api/schedule';
 import { ApiClient } from '../../../shared/services/api/client';
 import StaffCard from './StaffCard';
 import ScheduleSlot from './ScheduleSlot';
-import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
+import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 
 const api = new ApiClient();
 
@@ -16,7 +16,6 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
   const [weekStartDate, setWeekStartDate] = useState(() => {
     const today = new Date();
     const day = today.getDay();
-    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Monday
     return startOfWeek(today, { weekStartsOn: 1 });
   });
 
@@ -26,6 +25,18 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
   const [draggedItem, setDraggedItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredStaff = useMemo(() => {
+    return staffList.filter(staff => {
+      const search = searchTerm.toLowerCase();
+      return (
+        (staff.full_name && staff.full_name.toLowerCase().includes(search)) ||
+        (staff.username && staff.username.toLowerCase().includes(search)) ||
+        (staff.email && staff.email.toLowerCase().includes(search))
+      );
+    });
+  }, [staffList, searchTerm]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -91,14 +102,19 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
   // Load staff list
   const loadStaffList = useCallback(async () => {
     try {
+      console.log('🔍 Loading staff list from manager/staff...');
       const response = await api.get('manager/staff');
+      console.log('📊 Staff API response:', response);
       const staffArray = Array.isArray(response) ? response : (response?.data || []);
+      console.log('👥 Staff array to set:', staffArray);
       setStaffList(staffArray);
     } catch (error) {
-      console.error('Error loading staff:', error);
+      console.error('❌ Error loading staff:', error);
       setStaffList([]);
     }
   }, []);
+
+  const [originalSchedules, setOriginalSchedules] = useState([]);
 
   // Load weekly schedules
   const loadWeeklySchedules = useCallback(async () => {
@@ -106,10 +122,10 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
       setLoading(true);
       const startDateStr = format(weekStartDate, 'yyyy-MM-dd');
       const response = await scheduleAPI.getWeeklySchedule(startDateStr);
-      
+
       const schedulesArray = Array.isArray(response) ? response : [];
-      
-      // Transform API response
+
+      console.log('📅 Weekly Schedule RAW Response:', response);
       const transformed = schedulesArray.map(s => ({
         id: s.id,
         staff_id: s.staff_id,
@@ -117,15 +133,17 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
         scheduled_date: s.scheduled_date,
         status: s.status,
         notes: s.notes,
-        staff: s.staff || { 
-          id: s.staff_id, 
+        staff: {
+          id: s.staff_id,
           full_name: s.staff_name || 'Unknown',
-          username: '',
-          email: ''
+          username: s.staff_username || s.staff_name || `User #${s.staff_id}`,
+          email: s.staff_email || ''
         }
       }));
-      
+      console.log('🔄 Transformed Schedules:', transformed);
+
       setSchedules(transformed);
+      setOriginalSchedules(JSON.parse(JSON.stringify(transformed))); // Deep copy
       setHasChanges(false);
       if (onScheduleChange) {
         onScheduleChange(false);
@@ -133,6 +151,7 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
     } catch (error) {
       console.error('Error loading weekly schedules:', error);
       setSchedules([]);
+      setOriginalSchedules([]);
     } finally {
       setLoading(false);
     }
@@ -166,20 +185,34 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
     // Handle dropping staff card into schedule slot
     if (activeId.startsWith('staff-') && overId.includes('-')) {
       const staffId = parseInt(activeId.replace('staff-', ''));
-      const [date, shiftId] = overId.split('-');
-      
+      // overId format: "2026-01-05-uuid-with-dashes"
+      // Date is first 10 chars (YYYY-MM-DD), shiftId is everything after
+      const date = overId.substring(0, 10);
+      const shiftId = overId.substring(11); // Skip the date and the dash after it
+
       const staff = staffList.find((s) => s.id === staffId);
       if (!staff) return;
 
-      // Check for conflicts
-      const existingSchedule = schedules.find(
-        (s) => s.scheduled_date === date && 
-               s.shift_id === shiftId &&
-               s.staff_id === staffId
+      // Check if this staff is already in THIS specific slot
+      const existingInSlot = schedules.find(
+        (s) => s.scheduled_date === date &&
+          s.shift_id === shiftId &&
+          s.staff_id === staffId
       );
 
-      if (existingSchedule) {
-        return; // Already scheduled
+      if (existingInSlot) {
+        return; // Already in this slot
+      }
+
+      // Optional: Check if staff is scheduled elsewhere on same date (optional, but good for "ràng buộc")
+      const existingOnDate = schedules.find(
+        (s) => s.scheduled_date === date && s.staff_id === staffId
+      );
+
+      if (existingOnDate) {
+        if (!window.confirm(`${staff.full_name} đã có lịch trong ngày ${date} tại ca khác. Bạn vẫn muốn gán thêm?`)) {
+          return;
+        }
       }
 
       // Add new schedule locally
@@ -228,30 +261,45 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
   const handleSaveSchedule = async () => {
     try {
       setLoading(true);
-      
-      // Collect new schedules (temp IDs)
+
+      // 1. Identify deletions: original IDs that are NOT in current schedules
+      const currentIds = new Set(schedules.map(s => s.id.toString()));
+      const toDelete = originalSchedules.filter(s => !currentIds.has(s.id.toString()));
+
+      // 2. Identify additions: schedules with 'temp-' IDs
       const newSchedules = schedules.filter((s) => s.id.toString().startsWith('temp-'));
-      
+
+      // Perform deletions
+      for (const schedule of toDelete) {
+        try {
+          await scheduleAPI.deleteSchedule(schedule.id);
+        } catch (err) {
+          console.error(`Failed to delete schedule ${schedule.id}:`, err);
+        }
+      }
+
+      // Perform additions
       if (newSchedules.length > 0) {
         const schedulesToSave = newSchedules.map((schedule) => ({
-          staff_id: schedule.staff_id,
+          staff_id: parseInt(schedule.staff_id), // Ensure it's an integer
           shift_id: schedule.shift_id,
           scheduled_date: schedule.scheduled_date,
           manager_id: managerId || user?.id,
+          notes: schedule.notes || ""
         }));
 
-        // Use bulk endpoint if available, otherwise create one by one
+        // Use bulk endpoint
         try {
           await scheduleAPI.bulkCreateSchedules(schedulesToSave);
         } catch (bulkError) {
           console.warn('Bulk create failed, trying individual creates:', bulkError);
-          // Fallback to individual creates
           for (const scheduleData of schedulesToSave) {
             await scheduleAPI.createSchedule(scheduleData);
           }
         }
       }
 
+      alert('Đã cập nhật lịch làm việc thành công!');
       // Reload to get updated data with real IDs
       await loadWeeklySchedules();
     } catch (error) {
@@ -275,9 +323,9 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
     setWeekStartDate(startOfWeek(new Date(), { weekStartsOn: 1 }));
   };
 
-  // Get schedule for a specific day and shift
-  const getScheduleForSlot = useCallback((date, shiftId) => {
-    return schedules.find(
+  // Get schedules for a specific day and shift
+  const getSchedulesForSlot = useCallback((date, shiftId) => {
+    return schedules.filter(
       (s) => s.scheduled_date === date && s.shift_id === shiftId
     );
   }, [schedules]);
@@ -330,7 +378,7 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
               </button>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-600">
               {format(weekStartDate, 'dd MMM')} - {format(addDays(weekStartDate, 6), 'dd MMM yyyy')}
@@ -364,16 +412,28 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
           <div className="col-span-1">
             <div className="sticky top-4 bg-white rounded-xl p-4 shadow-md border border-gray-200">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">Nhân viên</h3>
-              <div 
+
+              {/* Search Staff */}
+              <div className="mb-3">
+                <input
+                  type="text"
+                  placeholder="Tìm nhân viên..."
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <div
                 id="staff-pool"
-                className="space-y-2 max-h-[600px] overflow-y-auto"
+                className="space-y-2"
               >
-                {staffList.map((staff) => (
+                {filteredStaff.map((staff) => (
                   <StaffCard key={staff.id} staff={staff} />
                 ))}
-                {staffList.length === 0 && (
+                {filteredStaff.length === 0 && (
                   <div className="text-xs text-gray-500 text-center py-4">
-                    Không có nhân viên
+                    {staffList.length === 0 ? 'Không có nhân viên' : 'Không tìm thấy nhân viên'}
                   </div>
                 )}
               </div>
@@ -388,11 +448,10 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
                 {weekDays.map((day) => (
                   <div
                     key={day.date}
-                    className={`text-center font-semibold py-2 rounded-lg ${
-                      day.isToday 
-                        ? 'bg-blue-100 text-blue-700' 
-                        : 'text-gray-700'
-                    }`}
+                    className={`text-center font-semibold py-2 rounded-lg ${day.isToday
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700'
+                      }`}
                   >
                     <div className="text-xs">{day.dayName}</div>
                     <div className="text-sm">{day.dayNumber}</div>
@@ -414,9 +473,8 @@ const WeeklySchedule = ({ departmentId, managerId, onScheduleChange }) => {
                     </div>
                     <div className="grid grid-cols-7 gap-2">
                       {weekDays.map((day) => {
-                        const schedule = getScheduleForSlot(day.date, shift.id);
-                        const slotSchedules = schedule ? [schedule] : [];
-                        
+                        const slotSchedules = getSchedulesForSlot(day.date, shift.id);
+
                         return (
                           <ScheduleSlot
                             key={`${day.date}-${shift.id}`}

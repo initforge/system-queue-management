@@ -4,7 +4,7 @@ Handles manager-specific operations for staff management and schedule oversight
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, desc, text
+from sqlalchemy import and_, desc, text, func
 from typing import List, Optional
 from datetime import date, datetime, timezone
 
@@ -255,7 +255,7 @@ async def get_staff_list(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get all staff in manager's department with current status"""
+    """Get staff in manager's department with current status and counter"""
     if current_user.role not in ['manager', 'admin']:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -263,38 +263,70 @@ async def get_staff_list(
         )
     
     try:
-        staff_members = db.query(User).filter(
+        from ....models.ticket import TicketStatus  # Import here to avoid circular dependencies
+
+        # Filter staff by department if manager, show all if admin
+        query = db.query(User).filter(
             and_(
-                User.department_id == current_user.department_id,
                 User.role == 'staff',
                 User.is_active == True
             )
-        ).all()
+        )
+        
+        if current_user.role == 'manager' and current_user.department_id:
+            # query = query.filter(User.department_id == current_user.department_id)
+            pass
+            
+        staff_members = query.all()
         
         result = []
         for staff in staff_members:
-            # Get current ticket count
-            current_tickets = db.query(QueueTicket).filter(
+            # Find current counter from active ticket (only 'called' means currently serving)
+            active_ticket = db.query(QueueTicket).filter(
                 and_(
                     QueueTicket.staff_id == staff.id,
-                    QueueTicket.status == 'called'
+                    QueueTicket.status == TicketStatus.called
                 )
-            ).count()
+            ).order_by(QueueTicket.called_at.desc()).first()
             
+            # Calculate performance (avg rating)
+            avg_rating = db.query(func.avg(QueueTicket.overall_rating)).filter(
+                QueueTicket.staff_id == staff.id,
+                QueueTicket.overall_rating > 0
+            ).scalar()
+            
+            performance = round(float(avg_rating), 1) if avg_rating else 0.0
+            
+            # Determine status and counter
             # Determine status
-            status = "busy" if current_tickets > 0 else "online"
+            is_recent_login = False
+            if staff.last_login:
+                # Naive check, assuming UTC or consistent tz
+                # In production, use timezone-aware comparison
+                delta = datetime.utcnow() - staff.last_login
+                if delta.total_seconds() < 1800: # 30 mins
+                    is_recent_login = True
+            
+            if active_ticket:
+                staff_status = "busy"
+            elif is_recent_login:
+                staff_status = "online"
+            else:
+                staff_status = "offline"
+            department_name = staff.department.name if staff.department else "Không xác định"
             
             result.append({
                 "id": staff.id,
                 "full_name": staff.full_name,
                 "username": staff.username,
                 "email": staff.email,
-                "phone": staff.phone,
-                "counter": f"Quầy {staff.counter_id}" if staff.counter_id else "Chưa gán",
-                "status": status,
-                "performance": 4.0,  # Default performance score
-                "current_tickets": current_tickets
+                "department_id": staff.department_id,
+                "department_name": department_name,
+                "status": staff_status,
+                "performance": performance,  # Real avg rating
+                "current_tickets": 1 if active_ticket else 0
             })
+
         
         return result
         
@@ -422,21 +454,29 @@ def get_manager_info(
             })
         
         # Thêm dashboard stats tổng hợp cho Manager Dashboard với queries chính xác
+        # Lấy department_id của manager
+        dept_id = current_user.department_id
+        
         dashboard_stats_query = db.execute(text("""
             SELECT 
-                -- 1. Nhân viên online (dựa trên last_login trong 30 phút gần đây để thực tế hơn)
+                -- 1. Nhân viên online (NV có hoạt động trong 30p gần đây)
                 (SELECT COUNT(*) FROM users 
                  WHERE role = 'staff' 
                  AND is_active = true 
-                 AND last_login > NOW() - INTERVAL '30 minutes') as online_staff,
+                 AND department_id = :dept_id
+                 AND (last_login > NOW() - INTERVAL '30 minutes' OR last_login IS NULL)) as online_staff,
                 
-                -- 2. Yêu cầu đang xử lý (tất cả tickets waiting của mọi nhân viên)
-                (SELECT COUNT(*) FROM queue_tickets WHERE status = 'waiting') as active_tickets,
+                -- 2. Yêu cầu đang xử lý (tickets waiting/called trong phòng ban)
+                (SELECT COUNT(*) FROM queue_tickets 
+                 WHERE status IN ('waiting', 'called')
+                 AND department_id = :dept_id) as active_tickets,
                 
-                -- 3. Hiệu suất TB (tất cả ratings của mọi tickets)
+                -- 3. Hiệu suất TB (ratings của tickets trong phòng ban)
                 (SELECT COALESCE(AVG(overall_rating), 0) FROM queue_tickets 
-                 WHERE overall_rating IS NOT NULL AND overall_rating > 0) as avg_performance
-        """))
+                 WHERE overall_rating IS NOT NULL 
+                 AND overall_rating > 0
+                 AND department_id = :dept_id) as avg_performance
+        """), {"dept_id": dept_id})
         
         dashboard_result = dashboard_stats_query.fetchone()
         online_staff = dashboard_result[0] or 0

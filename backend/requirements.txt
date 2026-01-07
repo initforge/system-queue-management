@@ -49,7 +49,6 @@ structlog==23.2.0
 
 # AI & Cloud Services
 google-generativeai==0.3.1
-cloudinary==1.36.0
 
 # Background Tasks
 celery==5.3.4

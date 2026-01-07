@@ -6,7 +6,8 @@ import { AlertModal, ConfirmModal } from '../../../shared/components/ui/Professi
 import { ApiClient } from '../../../shared/services/api/client';
 import ScheduleManagement from '../../schedule/ScheduleManagement';
 import AIHelper from '../../ai-helper/AIHelper';
-import KnowledgeBase from '../../knowledge-base/KnowledgeBase';
+
+
 
 // API client
 const api = new ApiClient();
@@ -39,7 +40,7 @@ const ManagerDashboard = () => {
   const { socket } = useWebSocket();
   const [activeTab, setActiveTab] = useState('staff');
   const [loading, setLoading] = useState(false);
-  
+
   // Modal states
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -47,7 +48,7 @@ const ManagerDashboard = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [staffToAssign, setStaffToAssign] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  
+
   // Data states
   const [staffList, setStaffList] = useState([]);
   const [complaintsList, setComplaintsList] = useState([]);
@@ -67,7 +68,7 @@ const ManagerDashboard = () => {
     language: 'vi',
     reportFormat: 'pdf'
   });
-  
+
   // Add complaint detail modal states
   const [showComplaintDetailModal, setShowComplaintDetailModal] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -96,20 +97,20 @@ const ManagerDashboard = () => {
       if (response.ok) {
         // Update local state - remove complaint from waiting list
         setComplaintsList(prev => prev.filter(c => c.id !== complaintId));
-        
+
         setComplaintStats(prev => ({
           waiting: prev.waiting - 1,
           completed: prev.completed + 1
         }));
-        
+
         setShowComplaintDetailModal(false);
         setSelectedComplaint(null);
-        
+
         // Show success notification
         handleNotification({
           message: `✅ Khiếu nại #${complaintId} đã được giải quyết thành công`
         });
-        
+
         // Refresh complaints data
         loadComplaints();
       } else if (response.status === 401) {
@@ -191,7 +192,7 @@ const ManagerDashboard = () => {
       });
     }
   };
-  
+
   // Chat states
   const [chatRooms, setChatRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -212,7 +213,7 @@ const ManagerDashboard = () => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setComplaintStats({
@@ -236,14 +237,14 @@ const ManagerDashboard = () => {
       loadDashboardData();
       // loadChatRooms(); // Commented out to avoid 404 error
     }
-    
+
     // Setup WebSocket listeners for realtime updates
     if (socket) {
       socket.on('staff_update', handleStaffUpdate);
       socket.on('new_message', handleNewMessage);
       socket.on('notification', handleNotification);
       socket.on('new_complaint', handleNewComplaint);
-      
+
       return () => {
         socket.off('staff_update', handleStaffUpdate);
         socket.off('new_message', handleNewMessage);
@@ -258,9 +259,9 @@ const ManagerDashboard = () => {
   useEffect(() => {
     if (user && activeTab === 'complaints') {
       loadComplaints();
-      
+
       const interval = setInterval(loadComplaints, 30000); // Refresh every 30 seconds
-      
+
       return () => clearInterval(interval);
     }
   }, [user, activeTab, loadComplaints]);
@@ -275,15 +276,15 @@ const ManagerDashboard = () => {
   // Handle staff updates from WebSocket
   const handleStaffUpdate = (data) => {
     if (data.type === 'status_change') {
-      setStaffList(prev => prev.map(staff => 
-        staff.id === data.staff_id ? {...staff, status: data.status} : staff
+      setStaffList(prev => prev.map(staff =>
+        staff.id === data.staff_id ? { ...staff, status: data.status } : staff
       ));
     } else if (data.type === 'performance_update') {
-      setStaffList(prev => prev.map(staff => 
-        staff.id === data.staff_id ? {...staff, performance: data.performance} : staff
+      setStaffList(prev => prev.map(staff =>
+        staff.id === data.staff_id ? { ...staff, performance: data.performance } : staff
       ));
     }
-    
+
     // Refresh dashboard stats
     loadDashboardData();
   };
@@ -293,11 +294,11 @@ const ManagerDashboard = () => {
     if (selectedRoom === data.roomId) {
       setMessages(prev => [...prev, data.message]);
     }
-    
+
     // Update notification count for room
     setChatRooms(prev => prev.map(r => {
       if (r.id === data.roomId && selectedRoom !== data.roomId) {
-        return {...r, unreadCount: (r.unreadCount || 0) + 1};
+        return { ...r, unreadCount: (r.unreadCount || 0) + 1 };
       }
       return r;
     }));
@@ -330,7 +331,7 @@ const ManagerDashboard = () => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (managerResponse.ok) {
         const managerData = await managerResponse.json();
         console.log('Manager data loaded:', managerData);
@@ -340,7 +341,7 @@ const ManagerDashboard = () => {
           completed: managerData.completed_complaints || 0
         });
         setComplaintsList(managerData.recent_complaints || []);
-        
+
         // Cập nhật dashboard stats tổng hợp từ backend
         if (managerData.dashboard_stats) {
           setDashboardStats({
@@ -356,7 +357,7 @@ const ManagerDashboard = () => {
       } else {
         console.error('Failed to load manager data:', managerResponse.status);
       }
-      
+
       // Load staff list using fetch  
       const staffResponse = await fetch('/api/v1/manager/staff', {
         headers: {
@@ -364,12 +365,12 @@ const ManagerDashboard = () => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       let staffArray = [];
       if (staffResponse.ok) {
         const staffData = await staffResponse.json();
-        staffArray = Array.isArray(staffData) ? staffData : 
-                    (staffData.data || staffData.value || []);
+        staffArray = Array.isArray(staffData) ? staffData :
+          (staffData.data || staffData.value || []);
       } else if (staffResponse.status === 401) {
         console.error('Authentication failed while loading staff, redirecting to login');
         logout();
@@ -378,9 +379,9 @@ const ManagerDashboard = () => {
         console.error('Failed to load staff data:', staffResponse.status);
       }
       setStaffList(staffArray);
-      
+
       // Dashboard stats đã được cập nhật từ manager-info API (không cần tính từ staff data nữa)
-      
+
     } catch (error) {
       console.error("Error loading dashboard data:", error);
       // If error contains authentication issues, redirect to login
@@ -398,14 +399,14 @@ const ManagerDashboard = () => {
   const loadMessages = async (roomId) => {
     try {
       const messagesResponse = await api.get(`manager/chat/messages/${roomId}`);
-      const messagesArray = Array.isArray(messagesResponse) ? messagesResponse : 
-                           (messagesResponse.data || messagesResponse.value || []);
+      const messagesArray = Array.isArray(messagesResponse) ? messagesResponse :
+        (messagesResponse.data || messagesResponse.value || []);
       setMessages(messagesArray);
-      
+
       // Mark room as read
       setChatRooms(prev => prev.map(r => {
         if (r.id === roomId) {
-          return {...r, unreadCount: 0};
+          return { ...r, unreadCount: 0 };
         }
         return r;
       }));
@@ -417,14 +418,14 @@ const ManagerDashboard = () => {
   // Send chat message
   const sendMessage = async () => {
     if (!messageInput.trim() || !selectedRoom) return;
-    
+
     try {
       await api.post(`manager/chat/messages/${selectedRoom}`, {
         content: messageInput,
         isEmergency: emergencyMode,
         emergencyReason: emergencyMode ? emergencyReason : undefined
       });
-      
+
       setMessageInput('');
       setEmergencyMode(false);
       setEmergencyReason('');
@@ -451,7 +452,7 @@ const ManagerDashboard = () => {
         staff_id: staffToAssign.id,
         task_id: taskId
       });
-      
+
       setShowAssignModal(false);
       loadDashboardData();
       handleNotification({
@@ -503,7 +504,7 @@ const ManagerDashboard = () => {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <motion.div 
+              <motion.div
                 whileHover={{ rotate: 5, scale: 1.05 }}
                 className="w-16 h-16 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center shadow-lg"
               >
@@ -523,10 +524,10 @@ const ManagerDashboard = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <motion.div className="relative" whileHover={{ scale: 1.05 }}>
-                <motion.div 
+                <motion.div
                   whileHover={{ scale: 1.1 }}
                   onClick={handleNotificationClick}
                   className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center cursor-pointer shadow-lg"
@@ -539,7 +540,7 @@ const ManagerDashboard = () => {
                   </span>
                 )}
               </motion.div>
-              
+
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 onClick={handleLogoutClick}
@@ -551,42 +552,36 @@ const ManagerDashboard = () => {
           </div>
         </div>
       </FadeIn>
-      
+
       {/* Navigation Tabs */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="flex space-x-4 overflow-x-auto pb-2">
-          <TabButton 
-            active={activeTab === 'staff'} 
+          <TabButton
+            active={activeTab === 'staff'}
             onClick={() => setActiveTab('staff')}
             icon="👥"
             text="Quản lý nhân viên"
           />
-          <TabButton 
-            active={activeTab === 'schedule'} 
+          <TabButton
+            active={activeTab === 'schedule'}
             onClick={() => setActiveTab('schedule')}
             icon="📅"
             text="Quản lý lịch làm việc"
           />
-          <TabButton 
-            active={activeTab === 'ai-helper'} 
+          <TabButton
+            active={activeTab === 'ai-helper'}
             onClick={() => setActiveTab('ai-helper')}
             icon="🤖"
             text="AI Helper"
           />
-          <TabButton 
-            active={activeTab === 'complaints'} 
+          <TabButton
+            active={activeTab === 'complaints'}
             onClick={() => setActiveTab('complaints')}
             icon="🚩"
             text="Khiếu nại"
           />
-          <TabButton 
-            active={activeTab === 'knowledge-base'} 
-            onClick={() => setActiveTab('knowledge-base')}
-            icon="📚"
-            text="Quản lý kiến thức"
-          />
         </div>
-        
+
         {/* Main Content */}
         <div className="mt-6">
           <AnimatePresence mode="wait">
@@ -605,7 +600,7 @@ const ManagerDashboard = () => {
                     <span className="text-4xl mr-3">👥</span>
                     Quản lý nhân viên
                   </h2>
-                  
+
                   {/* Status Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <ScaleIn delay={0.1} className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
@@ -641,7 +636,7 @@ const ManagerDashboard = () => {
                       <p className="text-purple-700 mt-1">điểm</p>
                     </ScaleIn>
                   </div>
-                  
+
                   {/* Staff Table */}
                   <FadeIn className="bg-white rounded-xl border border-blue-100 overflow-hidden shadow-md">
                     <div className="overflow-x-auto">
@@ -649,7 +644,7 @@ const ManagerDashboard = () => {
                         <thead className="bg-gradient-to-r from-blue-50 to-blue-100 text-blue-900">
                           <tr>
                             <th className="px-6 py-4 text-left text-sm font-semibold">Tên nhân viên</th>
-                            <th className="px-6 py-4 text-left text-sm font-semibold">Quầy</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold">Phòng ban</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold">Trạng thái</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold">Hiệu suất</th>
                             <th className="px-6 py-4 text-left text-sm font-semibold">Thao tác</th>
@@ -678,47 +673,37 @@ const ManagerDashboard = () => {
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <span className="font-semibold">{staff.full_name}</span>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  {staff.counter || '-'}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {staff.department_name || '-'}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`px-2 py-1 rounded-full text-xs ${
-                                    staff.status === 'online' ? 'bg-green-100 text-green-800' :
+                                  <span className={`px-2 py-1 rounded-full text-xs ${staff.status === 'online' ? 'bg-green-100 text-green-800' :
                                     staff.status === 'busy' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-gray-100 text-gray-800'
-                                  }`}>
-                                    {staff.status === 'online' ? 'Online' : 
-                                     staff.status === 'busy' ? 'Đang bận' : 
-                                     'Offline'}
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                    {staff.status === 'online' ? 'Online' :
+                                      staff.status === 'busy' ? 'Đang bận' :
+                                        'Offline'}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="flex items-center">
-                                    <span className="mr-2">{staff.performance || '4.0'}/5</span>
+                                    <span className="mr-2">{staff.performance !== undefined ? staff.performance : 0}/5</span>
                                     <div className="w-24 h-2 bg-gray-200 rounded-full">
-                                      <div 
-                                        className="h-full bg-blue-500 rounded-full" 
-                                        style={{width: `${(staff.performance || 4.0) * 20}%`}}
+                                      <div
+                                        className="h-full bg-blue-500 rounded-full"
+                                        style={{ width: `${(staff.performance || 0) * 20}%` }}
                                       ></div>
                                     </div>
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="flex space-x-2">
-                                    <button 
-                                      onClick={() => assignStaff(staff)}
-                                      className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                                    <button
+                                      disabled
+                                      className="px-4 py-2 bg-gray-100 text-gray-400 text-xs rounded-lg border border-gray-200 cursor-not-allowed italic"
                                     >
-                                      Phân công
-                                    </button>
-                                    <button 
-                                      onClick={() => {
-                                        handleRoomSelect(`staff-${staff.id}`);
-                                        setActiveTab('chat');
-                                      }}
-                                      className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
-                                    >
-                                      Chat
+                                      Tiếp tục phát triển
                                     </button>
                                   </div>
                                 </td>
@@ -729,10 +714,10 @@ const ManagerDashboard = () => {
                       </table>
                     </div>
                   </FadeIn>
-                  
+
                   {/* Quick Actions */}
                   <div className="flex justify-between items-center mt-6">
-                    <button 
+                    <button
                       onClick={() => loadDashboardData()}
                       className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center space-x-2"
                     >
@@ -745,7 +730,7 @@ const ManagerDashboard = () => {
                 </FadeIn>
               </motion.div>
             )}
-            
+
             {/* Schedule Management Tab */}
             {activeTab === 'schedule' && (
               <motion.div
@@ -759,8 +744,9 @@ const ManagerDashboard = () => {
                 <ScheduleManagement role="manager" />
               </motion.div>
             )}
-            
+
             {/* AI Helper Tab */}
+
             {activeTab === 'ai-helper' && (
               <motion.div
                 key="ai-helper"
@@ -775,7 +761,7 @@ const ManagerDashboard = () => {
                 </FadeIn>
               </motion.div>
             )}
-            
+
             {/* Old Chat Tab - Removed */}
             {false && activeTab === 'chat' && (
               <motion.div
@@ -795,12 +781,11 @@ const ManagerDashboard = () => {
                       </div>
                       <div className="space-y-2 overflow-y-auto h-[500px]">
                         {chatRooms.map(room => (
-                          <div 
+                          <div
                             key={room.id}
                             onClick={() => handleRoomSelect(room.id)}
-                            className={`p-3 rounded-lg cursor-pointer flex items-center justify-between ${
-                              selectedRoom === room.id ? 'bg-blue-100' : 'hover:bg-gray-100'
-                            }`}
+                            className={`p-3 rounded-lg cursor-pointer flex items-center justify-between ${selectedRoom === room.id ? 'bg-blue-100' : 'hover:bg-gray-100'
+                              }`}
                           >
                             <div className="flex items-center space-x-3">
                               <span className="text-xl">{room.type === 'direct' ? '👤' : '👥'}</span>
@@ -818,7 +803,7 @@ const ManagerDashboard = () => {
                         ))}
                       </div>
                     </div>
-                    
+
                     {/* Chat Area */}
                     <div className="w-2/3 pl-4 flex flex-col">
                       {selectedRoom ? (
@@ -828,7 +813,7 @@ const ManagerDashboard = () => {
                               {chatRooms.find(r => r.id === selectedRoom)?.name || 'Trò chuyện'}
                             </h3>
                           </div>
-                          
+
                           <div className="flex-grow overflow-y-auto mb-4 space-y-4 p-2">
                             {messages.length === 0 ? (
                               <div className="text-center py-8 text-gray-500">
@@ -839,8 +824,8 @@ const ManagerDashboard = () => {
                               messages.map((msg, index) => (
                                 <div key={index} className={`flex ${msg.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
                                   <div className={`
-                                    ${msg.sender_id === user?.id ? 
-                                      'bg-blue-500 text-white' : 
+                                    ${msg.sender_id === user?.id ?
+                                      'bg-blue-500 text-white' :
                                       'bg-white text-gray-800 border border-gray-200'} 
                                     rounded-lg p-3 shadow-sm max-w-xs
                                     ${msg.isEmergency ? 'border-2 border-red-500' : ''}
@@ -852,14 +837,14 @@ const ManagerDashboard = () => {
                                     )}
                                     <p className="text-sm">{msg.content}</p>
                                     <span className={`text-xs ${msg.sender_id === user?.id ? 'text-blue-200' : 'text-gray-500'}`}>
-                                      {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                   </div>
                                 </div>
                               ))
                             )}
                           </div>
-                          
+
                           <div>
                             {emergencyMode && (
                               <div className="bg-red-100 p-2 rounded-lg mb-2">
@@ -867,7 +852,7 @@ const ManagerDashboard = () => {
                                   <span className="text-sm font-bold text-red-700 flex items-center">
                                     <span className="mr-1">🚨</span> Chế độ khẩn cấp
                                   </span>
-                                  <button 
+                                  <button
                                     onClick={() => setEmergencyMode(false)}
                                     className="text-red-700 hover:text-red-900"
                                   >
@@ -884,10 +869,10 @@ const ManagerDashboard = () => {
                                 />
                               </div>
                             )}
-                            
+
                             <div className="flex space-x-2">
-                              <input 
-                                type="text" 
+                              <input
+                                type="text"
                                 placeholder="Nhập tin nhắn... (tối đa 200 ký tự)"
                                 value={messageInput}
                                 onChange={(e) => setMessageInput(e.target.value.substring(0, 200))}
@@ -895,13 +880,13 @@ const ManagerDashboard = () => {
                                 maxLength={200}
                                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                               />
-                              <button 
+                              <button
                                 onClick={sendMessage}
                                 className="px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                               >
                                 Gửi
                               </button>
-                              <button 
+                              <button
                                 onClick={() => setEmergencyMode(!emergencyMode)}
                                 className={`px-4 ${emergencyMode ? 'bg-red-500' : 'bg-gray-500'} text-white rounded-lg hover:opacity-90`}
                               >
@@ -923,7 +908,7 @@ const ManagerDashboard = () => {
                 </FadeIn>
               </motion.div>
             )}
-            
+
             {/* Complaints Tab */}
             {activeTab === 'complaints' && (
               <motion.div
@@ -939,7 +924,7 @@ const ManagerDashboard = () => {
                     <span className="text-4xl mr-3">🚩</span>
                     Khiếu nại
                   </h2>
-                  
+
                   {/* Complaint Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <ScaleIn className="bg-gradient-to-r from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
@@ -952,7 +937,7 @@ const ManagerDashboard = () => {
                       </div>
                       <p className="text-red-700 mt-1">chưa xử lý</p>
                     </ScaleIn>
-                    
+
                     <ScaleIn className="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-sm font-bold text-emerald-900">Đã giải quyết</h3>
@@ -964,7 +949,7 @@ const ManagerDashboard = () => {
                       <p className="text-emerald-700 mt-1">khiếu nại</p>
                     </ScaleIn>
                   </div>
-                  
+
                   {/* Complaints Table */}
                   <FadeIn className="bg-white rounded-xl border border-blue-100 overflow-hidden shadow-md">
                     <div className="overflow-x-auto">
@@ -1011,7 +996,7 @@ const ManagerDashboard = () => {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="flex space-x-2">
-                                    <button 
+                                    <button
                                       onClick={() => {
                                         console.log('Selected complaint data:', complaint); // Debug log
                                         setSelectedComplaint(complaint);
@@ -1033,23 +1018,8 @@ const ManagerDashboard = () => {
                 </FadeIn>
               </motion.div>
             )}
-            
-            {/* Knowledge Base Tab */}
-            {activeTab === 'knowledge-base' && (
-              <motion.div
-                key="knowledge-base"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <FadeIn className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
-                  <KnowledgeBase role="manager" />
-                </FadeIn>
-              </motion.div>
-            )}
-            
+
+
             {/* Old Settings Tab - Removed */}
             {false && activeTab === 'settings' && (
               <motion.div
@@ -1065,87 +1035,87 @@ const ManagerDashboard = () => {
                     <span className="text-4xl mr-3">⚙️</span>
                     Cài đặt
                   </h2>
-                  
+
                   <div className="space-y-6 max-w-2xl">
                     {/* Language Settings */}
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-3">Ngôn ngữ</h3>
                       <div className="flex items-center space-x-4">
                         <label className="flex items-center space-x-2 cursor-pointer">
-                          <input 
-                            type="radio" 
-                            checked={managerSettings.language === 'vi'} 
-                            onChange={() => setManagerSettings({...managerSettings, language: 'vi'})}
+                          <input
+                            type="radio"
+                            checked={managerSettings.language === 'vi'}
+                            onChange={() => setManagerSettings({ ...managerSettings, language: 'vi' })}
                           />
                           <span>Tiếng Việt</span>
                         </label>
                         <label className="flex items-center space-x-2 cursor-pointer">
-                          <input 
-                            type="radio" 
-                            checked={managerSettings.language === 'en'} 
-                            onChange={() => setManagerSettings({...managerSettings, language: 'en'})}
+                          <input
+                            type="radio"
+                            checked={managerSettings.language === 'en'}
+                            onChange={() => setManagerSettings({ ...managerSettings, language: 'en' })}
                           />
                           <span>Tiếng Anh</span>
                         </label>
                       </div>
                     </div>
-                    
+
                     {/* Notification Settings */}
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-3">Thông báo</h3>
                       <div className="space-y-3">
                         <label className="flex items-center space-x-2 cursor-pointer">
-                          <input 
-                            type="checkbox" 
-                            checked={managerSettings.notifications} 
-                            onChange={() => setManagerSettings({...managerSettings, notifications: !managerSettings.notifications})}
+                          <input
+                            type="checkbox"
+                            checked={managerSettings.notifications}
+                            onChange={() => setManagerSettings({ ...managerSettings, notifications: !managerSettings.notifications })}
                           />
                           <span>Bật thông báo đẩy</span>
                         </label>
                       </div>
                     </div>
-                    
+
                     {/* Report Export Settings */}
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-3">Xuất báo cáo</h3>
                       <div className="flex items-center space-x-4">
                         <label className="flex items-center space-x-2 cursor-pointer">
-                          <input 
-                            type="radio" 
-                            checked={managerSettings.reportFormat === 'pdf'} 
-                            onChange={() => setManagerSettings({...managerSettings, reportFormat: 'pdf'})}
+                          <input
+                            type="radio"
+                            checked={managerSettings.reportFormat === 'pdf'}
+                            onChange={() => setManagerSettings({ ...managerSettings, reportFormat: 'pdf' })}
                           />
                           <span>PDF</span>
                         </label>
                         <label className="flex items-center space-x-2 cursor-pointer">
-                          <input 
-                            type="radio" 
-                            checked={managerSettings.reportFormat === 'excel'} 
-                            onChange={() => setManagerSettings({...managerSettings, reportFormat: 'excel'})}
+                          <input
+                            type="radio"
+                            checked={managerSettings.reportFormat === 'excel'}
+                            onChange={() => setManagerSettings({ ...managerSettings, reportFormat: 'excel' })}
                           />
                           <span>Excel</span>
                         </label>
                         <label className="flex items-center space-x-2 cursor-pointer">
-                          <input 
-                            type="radio" 
-                            checked={managerSettings.reportFormat === 'json'} 
-                            onChange={() => setManagerSettings({...managerSettings, reportFormat: 'json'})}
+                          <input
+                            type="radio"
+                            checked={managerSettings.reportFormat === 'json'}
+                            onChange={() => setManagerSettings({ ...managerSettings, reportFormat: 'json' })}
                           />
                           <span>JSON</span>
                         </label>
                       </div>
                     </div>
-                    
+
                     {/* User Management */}
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-3">Quản lý quyền</h3>
-                      <button 
+                      <button
                         className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                       >
                         Quản lý vai trò nhân viên
                       </button>
                     </div>
-                    
+
                     <div className="pt-4">
                       <motion.button
                         whileHover={{ scale: 1.05 }}
@@ -1162,7 +1132,7 @@ const ManagerDashboard = () => {
           </AnimatePresence>
         </div>
       </div>
-      
+
       {/* Modals */}
       <AlertModal
         isOpen={showNotificationModal}
@@ -1171,7 +1141,7 @@ const ManagerDashboard = () => {
         message={notificationMessage}
         type="info"
       />
-      
+
       <ConfirmModal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
@@ -1181,7 +1151,7 @@ const ManagerDashboard = () => {
         confirmText="Đăng xuất"
         cancelText="Hủy"
       />
-      
+
       <ConfirmModal
         isOpen={showAssignModal}
         onClose={() => setShowAssignModal(false)}
@@ -1316,7 +1286,7 @@ const ManagerDashboard = () => {
                   )}
                   {selectedComplaint.status !== 'waiting' && (
                     <div className="text-gray-600 bg-yellow-50 p-4 rounded-lg">
-                      ⚠️ Các nút hành động chỉ hiển thị cho khiếu nại có trạng thái "waiting". 
+                      ⚠️ Các nút hành động chỉ hiển thị cho khiếu nại có trạng thái "waiting".
                       Khiếu nại này có status: <strong>{selectedComplaint.status}</strong>
                     </div>
                   )}
@@ -1375,14 +1345,14 @@ const ManagerDashboard = () => {
                     <h3 className="text-lg font-semibold text-gray-800">
                       Thông báo gần đây ({notifications.length})
                     </h3>
-                    <button 
+                    <button
                       onClick={() => setNotifications([])}
                       className="text-sm text-gray-500 hover:text-red-600 transition-colors"
                     >
                       Xóa tất cả
                     </button>
                   </div>
-                  
+
                   {notifications.map((notification, index) => (
                     <motion.div
                       key={index}
@@ -1394,9 +1364,9 @@ const ManagerDashboard = () => {
                       <div className="flex items-start space-x-4">
                         <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0">
                           <span className="text-white text-lg">
-                            {notification.type === 'complaint_notification' ? '🚩' : 
-                             notification.type === 'success' ? '✅' : 
-                             notification.type === 'warning' ? '⚠️' : '💡'}
+                            {notification.type === 'complaint_notification' ? '🚩' :
+                              notification.type === 'success' ? '✅' :
+                                notification.type === 'warning' ? '⚠️' : '💡'}
                           </span>
                         </div>
                         <div className="flex-1">
@@ -1519,11 +1489,10 @@ const TabButton = ({ active, onClick, icon, text }) => (
     whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.95 }}
     onClick={onClick}
-    className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors whitespace-nowrap ${
-      active 
-        ? 'bg-blue-500 text-white shadow-md' 
-        : 'bg-white text-gray-700 hover:bg-gray-100'
-    }`}
+    className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors whitespace-nowrap ${active
+      ? 'bg-blue-500 text-white shadow-md'
+      : 'bg-white text-gray-700 hover:bg-gray-100'
+      }`}
   >
     <span className="text-lg">{icon}</span>
     <span>{text}</span>

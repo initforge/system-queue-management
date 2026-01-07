@@ -54,7 +54,7 @@ class ScheduleAPIService {
 
     async updateSchedule(scheduleId, scheduleData) {
         try {
-            return await api.put(`${SCHEDULE_API_BASE}/schedule/${scheduleId}`, scheduleData);
+            return await api.put(`${SCHEDULE_API_BASE}/${scheduleId}`, scheduleData);
         } catch (error) {
             console.error('Error updating schedule:', error);
             throw error;
@@ -63,7 +63,7 @@ class ScheduleAPIService {
 
     async deleteSchedule(scheduleId) {
         try {
-            return await api.delete(`${SCHEDULE_API_BASE}/schedule/${scheduleId}`);
+            return await api.delete(`${SCHEDULE_API_BASE}/${scheduleId}`);
         } catch (error) {
             console.error('Error deleting schedule:', error);
             throw error;

@@ -30,8 +30,8 @@ from .feedback import router as feedback_router
 from .roles.manager import router as manager_router
 from .schedule import router as schedule_router
 from .ai_helper import router as ai_helper_router
-from .knowledge_base import router as knowledge_base_router
 from .auth import router as auth_router
+
 
 # Create main API v1 router
 api_router = APIRouter()
@@ -43,9 +43,10 @@ api_router.include_router(feedback_router)  # No prefix since it already has /fe
 api_router.include_router(manager_router, prefix="/manager", tags=["Manager"])
 api_router.include_router(schedule_router, prefix="/schedule", tags=["Schedule"])
 api_router.include_router(ai_helper_router, prefix="/ai-helper", tags=["AI Helper"])
-api_router.include_router(knowledge_base_router, prefix="/knowledge-base", tags=["Knowledge Base"])
 # api_router.include_router(services_router, prefix="/services", tags=["Services"])
 # api_router.include_router(tickets_router, prefix="/tickets", tags=["Tickets"])
+
+
 
 # Department endpoints
 @api_router.get("/departments", response_model=List[DepartmentResponse])

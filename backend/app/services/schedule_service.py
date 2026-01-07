@@ -19,23 +19,9 @@ class ScheduleService:
         self.db = db
     
     # Shift Management
-    def get_all_shifts(self) -> List[dict]:
+    def get_all_shifts(self) -> List[Shift]:
         """Get all active shifts"""
-        # Shift is already imported at top
-        
-        shifts = self.db.query(Shift).filter(Shift.is_active == True).all()
-        return [
-            {
-                "id": str(shift.id),
-                "name": shift.name,
-                "shift_type": shift.shift_type,
-                "start_time": shift.start_time.strftime("%H:%M"),
-                "end_time": shift.end_time.strftime("%H:%M"),
-                "description": shift.description,
-                "color": self._get_shift_color(shift.shift_type)
-            }
-            for shift in shifts
-        ]
+        return self.db.query(Shift).filter(Shift.is_active == True).all()
     
     def _get_shift_color(self, shift_type: str) -> str:
         """Get color for shift type"""
@@ -50,11 +36,9 @@ class ScheduleService:
     def get_weekly_schedule(
         self, 
         start_date: date, 
-        staff_id: Optional[UUID] = None
+        staff_id: Optional[int] = None
     ) -> List[dict]:
         """Get weekly schedule with staff assignments"""
-        # StaffSchedule and Shift are already imported at top
-        
         end_date = start_date + timedelta(days=6)
         
         query = self.db.query(StaffSchedule).options(
@@ -75,27 +59,14 @@ class ScheduleService:
         # Format response
         result = []
         for schedule in schedules:
-            result.append({
-                "id": str(schedule.id),
-                "staff_id": str(schedule.staff_id),
-                "staff_name": schedule.staff.full_name,
-                "staff_avatar": "👤",  # Default avatar
-                "shift_id": str(schedule.shift_id),
-                "shift_name": schedule.shift.name,
-                "shift_type": schedule.shift.shift_type,
-                "scheduled_date": schedule.scheduled_date.isoformat(),
-                "start_time": schedule.shift.start_time.strftime("%H:%M"),
-                "end_time": schedule.shift.end_time.strftime("%H:%M"),
-                "status": schedule.status,
-                "notes": schedule.notes
-            })
+            result.append(self._format_schedule_response(schedule))
         
         return result
     
     def create_schedule(
         self, 
         schedule_data: ScheduleCreate, 
-        manager_id: UUID
+        manager_id: int
     ) -> dict:
         """Create new schedule entry"""
         # StaffSchedule is already imported at top
@@ -125,6 +96,12 @@ class ScheduleService:
         self.db.add(schedule)
         self.db.commit()
         self.db.refresh(schedule)
+        
+        # Reload with relationships to ensure staff and shift are loaded
+        schedule = self.db.query(StaffSchedule).options(
+            joinedload(StaffSchedule.staff),
+            joinedload(StaffSchedule.shift)
+        ).filter(StaffSchedule.id == schedule.id).first()
         
         return self._format_schedule_response(schedule)
     
@@ -170,15 +147,24 @@ class ScheduleService:
     
     def _format_schedule_response(self, schedule) -> dict:
         """Format schedule for response"""
+        staff = schedule.staff
+        shift = schedule.shift
         return {
             "id": str(schedule.id),
-            "staff_id": str(schedule.staff_id),
-            "staff_name": schedule.staff.full_name if schedule.staff else None,
+            "staff_id": schedule.staff_id,
+            "staff_name": staff.full_name if staff else "Unknown",
+            "staff_username": staff.username if staff else "",
+            "staff_email": staff.email if staff else "",
+            "staff_avatar": "👤",
             "shift_id": str(schedule.shift_id),
-            "shift_name": schedule.shift.name if schedule.shift else None,
+            "shift_name": shift.name if shift else "Unknown",
+            "shift_type": shift.shift_type if shift else "other",
             "scheduled_date": schedule.scheduled_date.isoformat(),
+            "start_time": shift.start_time.strftime("%H:%M") if shift else "00:00",
+            "end_time": shift.end_time.strftime("%H:%M") if shift else "00:00",
             "status": schedule.status,
             "notes": schedule.notes,
+            "manager_id": schedule.manager_id,
             "created_at": schedule.created_at,
             "updated_at": schedule.updated_at
         }

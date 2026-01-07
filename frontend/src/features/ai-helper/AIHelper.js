@@ -30,12 +30,12 @@ const AIHelper = ({ role = 'staff' }) => {
     }
   }, []);
   const [suggestedQuestions] = useState([
-    'Thống kê hiệu suất của tôi thế nào?',
+    'Hôm nay tôi đã phục vụ bao nhiêu khách?',
     'Lịch làm việc tuần này của tôi?',
-    'Cách sử dụng hệ thống?',
+    'Hướng dẫn gọi phiếu và phục vụ khách?',
     ...(role === 'manager' ? [
-      'Thống kê phòng ban hôm nay?',
-      'Nhân viên nào đang đi trễ nhiều nhất?'
+      'Tình hình hàng đợi hôm nay thế nào?',
+      'Có bao nhiêu ca làm việc tuần này?'
     ] : [])
   ]);
 
@@ -52,20 +52,26 @@ const AIHelper = ({ role = 'staff' }) => {
     loadContext();
   }, []);
 
-  // Load conversation history if conversationId exists
+  // Load conversation history if conversationId exists (only on mount or conversationId change)
   useEffect(() => {
-    if (conversationId) {
+    if (conversationId && messages.length === 0) {
       const loadHistory = async () => {
         try {
           const history = await aiHelperAPI.getConversations(conversationId);
-          setMessages(history || []);
+          // Sort messages by created_at to ensure correct order
+          const sortedHistory = (history || []).sort((a, b) => {
+            const timeA = new Date(a.created_at || 0).getTime();
+            const timeB = new Date(b.created_at || 0).getTime();
+            return timeA - timeB;
+          });
+          setMessages(sortedHistory);
         } catch (error) {
           console.error('Error loading conversation history:', error);
         }
       };
       loadHistory();
     }
-  }, [conversationId]);
+  }, [conversationId]); // Only load when conversationId changes, not on every render
 
   // Auto scroll to bottom when messages change
   useEffect(() => {
@@ -111,31 +117,25 @@ const AIHelper = ({ role = 'staff' }) => {
         apiKey
       );
 
+      // Add assistant response to UI
+      if (response && response.message) {
+        const assistantMessage = {
+          id: Date.now() + 1,
+          role: 'assistant',
+          message: response.message,
+          created_at: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+      }
+
       // Update conversation ID if new conversation
       if (response.conversation_id && !conversationId) {
         setConversationId(response.conversation_id);
       }
-
-      // Reload messages to get both user and AI messages from server
-      if (response.conversation_id) {
-        const history = await aiHelperAPI.getConversations(response.conversation_id);
-        setMessages(history || []);
-      } else {
-        // Fallback: add AI response manually
-        setMessages(prev => [
-          ...prev,
-          {
-            id: Date.now() + 1,
-            role: 'assistant',
-            message: response.message,
-            created_at: response.timestamp
-          }
-        ]);
-      }
     } catch (error) {
       console.error('Error sending message:', error);
       let errorMessage = 'Xin lỗi, đã xảy ra lỗi khi xử lý yêu cầu. Vui lòng thử lại.';
-      
+
       // Handle specific error cases
       if (error.response?.status === 400 && error.response?.data?.detail?.includes('API key')) {
         errorMessage = 'API key không hợp lệ. Vui lòng kiểm tra lại API key trong cài đặt.';
@@ -143,10 +143,32 @@ const AIHelper = ({ role = 'staff' }) => {
       } else if (error.message?.includes('API key is required')) {
         errorMessage = 'Vui lòng cung cấp API key để sử dụng AI Helper.';
         setShowApiKeyModal(true);
+      } else if (error.response?.status === 429) {
+        // Rate limit error
+        errorMessage = '⚠️ Bạn đã vượt quá giới hạn sử dụng API (Rate Limit).\n\n' +
+          'Vui lòng:\n' +
+          '1. Đợi vài phút rồi thử lại\n' +
+          '2. Kiểm tra quota tại: https://ai.dev/usage?tab=rate-limit\n' +
+          '3. Nâng cấp gói API nếu cần thiết';
       } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
+        // Check if it's a rate limit message from backend
+        const backendMessage = error.response.data.message;
+        if (backendMessage.includes('quota') || backendMessage.includes('rate limit') || backendMessage.includes('429')) {
+          errorMessage = '⚠️ Bạn đã vượt quá giới hạn sử dụng API (Rate Limit).\n\n' +
+            'Vui lòng đợi vài phút rồi thử lại hoặc kiểm tra quota tại: https://ai.dev/usage?tab=rate-limit';
+        } else {
+          errorMessage = backendMessage;
+        }
+      } else if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (typeof detail === 'string' && (detail.includes('quota') || detail.includes('rate limit') || detail.includes('429'))) {
+          errorMessage = '⚠️ Bạn đã vượt quá giới hạn sử dụng API (Rate Limit).\n\n' +
+            'Vui lòng đợi vài phút rồi thử lại hoặc kiểm tra quota tại: https://ai.dev/usage?tab=rate-limit';
+        } else {
+          errorMessage = typeof detail === 'string' ? detail : JSON.stringify(detail);
+        }
       }
-      
+
       setMessages(prev => [
         ...prev,
         {
@@ -276,11 +298,10 @@ const AIHelper = ({ role = 'staff' }) => {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSendMessage}
                 disabled={loading || !messageInput.trim()}
-                className={`px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium transition-all ${
-                  loading || !messageInput.trim()
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:from-blue-600 hover:to-blue-700'
-                }`}
+                className={`px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium transition-all ${loading || !messageInput.trim()
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:from-blue-600 hover:to-blue-700'
+                  }`}
               >
                 {loading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -294,8 +315,8 @@ const AIHelper = ({ role = 'staff' }) => {
 
         {/* Context Panel */}
         <div className="lg:col-span-1">
-          <ContextPanel 
-            context={context} 
+          <ContextPanel
+            context={context}
             onAddContext={handleAddContext}
             onOpenApiKeyModal={() => setShowApiKeyModal(true)}
           />

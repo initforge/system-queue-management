@@ -1,0 +1,75 @@
+# Production Docker Compose for DigitalOcean Deployment
+# This is used for local production testing, not App Platform
+# App Platform uses .do/app.yaml instead
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: queue_db_prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-queue_management}
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./database/data.sql:/docker-entrypoint-initdb.d/02_data.sql
+    networks:
+      - queue-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: queue_backend_prod
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://admin:password@db:5432/queue_management}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=false
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=${CORS_ORIGINS}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - queue-network
+    restart: always
+
+  # React Frontend (production build with nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=${REACT_APP_API_URL}
+        - REACT_APP_WS_URL=${REACT_APP_WS_URL}
+    container_name: queue_frontend_prod
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - queue-network
+    restart: always
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  queue-network:
+    driver: bridge

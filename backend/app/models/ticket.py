@@ -29,6 +29,7 @@ class QueueTicket(Base):
     service_id = Column(Integer, ForeignKey("services.id"))
     department_id = Column(Integer, ForeignKey("departments.id"))
     staff_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    counter_id = Column(Integer, ForeignKey("counters.id"), nullable=True)
     status = Column(Enum(TicketStatus), default=TicketStatus.waiting)
     queue_position = Column(Integer, nullable=True)  # Position in queue
     notes = Column(Text, nullable=True)
@@ -37,6 +38,7 @@ class QueueTicket(Base):
     called_at = Column(DateTime, nullable=True)
     served_at = Column(DateTime, nullable=True)  # Changed from serving_started_at
     completed_at = Column(DateTime, nullable=True)
+
     
     # Rating and review fields (from database schema)
     service_rating = Column(Integer, nullable=True)  # 1-5 stars
@@ -50,6 +52,7 @@ class QueueTicket(Base):
     service = relationship("Service", back_populates="tickets")
     department = relationship("Department", back_populates="tickets")
     staff = relationship("User", back_populates="tickets_handled")
+    counter = relationship("Counter", back_populates="tickets")
     ticket_complaints = relationship("TicketComplaint", back_populates="ticket")
     feedback = relationship("Feedback", back_populates="ticket")
     notifications = relationship("StaffNotification", back_populates="ticket")

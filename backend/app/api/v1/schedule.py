@@ -84,7 +84,7 @@ async def get_shifts(
 @router.get("/week", response_model=List[ScheduleResponse])
 async def get_weekly_schedule(
     start_date: date,
-    staff_id: Optional[UUID] = None,
+    staff_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

@@ -39,11 +39,6 @@ class Settings(BaseSettings):
     # Gemini AI Configuration - API key is now provided by user via frontend
     # GEMINI_API_KEY removed for security - users provide their own API keys
     
-    # Cloudinary Configuration
-    CLOUDINARY_CLOUD_NAME: Optional[str] = os.getenv("CLOUDINARY_CLOUD_NAME", "")
-    CLOUDINARY_API_KEY: Optional[str] = os.getenv("CLOUDINARY_API_KEY", "")
-    CLOUDINARY_API_SECRET: Optional[str] = os.getenv("CLOUDINARY_API_SECRET", "")
-    
     class Config:
         env_file = ".env"
         case_sensitive = True

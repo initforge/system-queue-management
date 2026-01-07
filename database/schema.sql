@@ -459,6 +459,110 @@ CREATE INDEX idx_staff_notifications_type ON staff_notifications(notification_ty
 CREATE INDEX idx_staff_notifications_complaint ON staff_notifications(complaint_id) WHERE complaint_id IS NOT NULL;
 
 -- =====================================================
+-- SCHEDULE MANAGEMENT TABLES
+-- =====================================================
+
+-- Schedule-specific types
+CREATE TYPE shift_type AS ENUM ('morning', 'afternoon', 'night');
+CREATE TYPE shift_status AS ENUM ('scheduled', 'confirmed', 'cancelled', 'completed');
+CREATE TYPE leave_type AS ENUM ('sick', 'personal', 'vacation', 'emergency');
+CREATE TYPE leave_status AS ENUM ('pending', 'approved', 'rejected');
+CREATE TYPE exchange_status AS ENUM ('pending', 'approved', 'rejected', 'cancelled');
+CREATE TYPE checkin_status AS ENUM ('pending', 'approved', 'rejected');
+
+-- Shifts table
+CREATE TABLE shifts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    shift_type shift_type NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Staff schedules table
+CREATE TABLE staff_schedules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    staff_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    manager_id INTEGER NOT NULL REFERENCES users(id),
+    shift_id UUID NOT NULL REFERENCES shifts(id),
+    scheduled_date DATE NOT NULL,
+    status shift_status DEFAULT 'scheduled',
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Leave requests table
+CREATE TABLE leave_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    staff_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    manager_id INTEGER REFERENCES users(id),
+    leave_date DATE NOT NULL,
+    leave_type leave_type NOT NULL,
+    reason TEXT NOT NULL,
+    status leave_status DEFAULT 'pending',
+    rejection_reason TEXT,
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Shift exchanges table
+CREATE TABLE shift_exchanges (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    requesting_staff_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    target_staff_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    manager_id INTEGER REFERENCES users(id),
+    requesting_schedule_id UUID NOT NULL REFERENCES staff_schedules(id),
+    target_schedule_id UUID NOT NULL REFERENCES staff_schedules(id),
+    reason TEXT NOT NULL,
+    status exchange_status DEFAULT 'pending',
+    rejection_reason TEXT,
+    requested_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Staff checkins table
+CREATE TABLE staff_checkins (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    staff_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    schedule_id UUID NOT NULL REFERENCES staff_schedules(id),
+    manager_id INTEGER REFERENCES users(id),
+    checkin_time TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status checkin_status DEFAULT 'pending',
+    location TEXT,
+    notes TEXT,
+    approved_at TIMESTAMP WITH TIME ZONE,
+    rejected_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Staff attendance table
+CREATE TABLE staff_attendance (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    staff_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    schedule_id UUID NOT NULL REFERENCES staff_schedules(id),
+    checkin_time TIMESTAMP WITH TIME ZONE,
+    checkout_time TIMESTAMP WITH TIME ZONE,
+    break_start_time TIMESTAMP WITH TIME ZONE,
+    break_end_time TIMESTAMP WITH TIME ZONE,
+    total_hours VARCHAR(10),
+    overtime_hours VARCHAR(10) DEFAULT '0',
+    is_absent BOOLEAN DEFAULT FALSE,
+    absence_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =====================================================
 -- SUCCESS MESSAGE
 -- =====================================================
 

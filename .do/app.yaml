@@ -1,0 +1,77 @@
+# DigitalOcean App Platform Specification
+# https://docs.digitalocean.com/products/app-platform/reference/app-spec/
+
+name: qstream-queue-management
+
+# Database Component (Managed PostgreSQL)
+databases:
+  - name: qstream-db
+    engine: PG
+    version: "15"
+    size: db-s-1vcpu-1gb
+    num_nodes: 1
+
+# Services
+services:
+  # Backend API Service
+  - name: backend
+    github:
+      repo: initforge/system-queue-management
+      branch: main
+      deploy_on_push: true
+    source_dir: /backend
+    dockerfile_path: backend/Dockerfile
+    http_port: 8000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /api/v1/health
+      initial_delay_seconds: 30
+      period_seconds: 10
+    envs:
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${qstream-db.DATABASE_URL}
+      - key: JWT_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: CHANGE_THIS_TO_SECURE_SECRET
+      - key: JWT_ALGORITHM
+        scope: RUN_TIME
+        value: HS256
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        scope: RUN_TIME
+        value: "30"
+      - key: ENVIRONMENT
+        scope: RUN_TIME
+        value: production
+      - key: DEBUG
+        scope: RUN_TIME
+        value: "false"
+      - key: CORS_ORIGINS
+        scope: RUN_TIME
+        value: https://${APP_DOMAIN},https://www.${APP_DOMAIN}
+    routes:
+      - path: /api
+      - path: /ws
+
+  # Frontend Static Site
+  - name: frontend
+    github:
+      repo: initforge/system-queue-management
+      branch: main
+      deploy_on_push: true
+    source_dir: /frontend
+    dockerfile_path: frontend/Dockerfile
+    http_port: 80
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: REACT_APP_API_URL
+        scope: BUILD_TIME
+        value: https://${APP_DOMAIN}/api/v1
+      - key: REACT_APP_WS_URL
+        scope: BUILD_TIME
+        value: wss://${APP_DOMAIN}/ws
+    routes:
+      - path: /

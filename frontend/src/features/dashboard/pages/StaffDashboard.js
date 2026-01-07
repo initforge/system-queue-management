@@ -6,7 +6,7 @@ import { AlertModal, ConfirmModal } from '../../../shared/components/ui/Professi
 import { ApiClient } from '../../../shared/services/api/client';
 import ScheduleManagement from '../../schedule/ScheduleManagement';
 import AIHelper from '../../ai-helper/AIHelper';
-import KnowledgeBase from '../../knowledge-base/KnowledgeBase';
+
 
 // API client
 const api = new ApiClient();
@@ -37,40 +37,38 @@ const ScaleIn = ({ children, className = "", delay = 0 }) => (
 // Notification Card Component with expand feature
 const NotificationCard = ({ notification, index, onMarkAsRead }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   const handleCardClick = () => {
     if (!notification.isRead && onMarkAsRead) {
       onMarkAsRead(notification.id);
     }
     setIsExpanded(!isExpanded);
   };
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.1 }}
       onClick={handleCardClick}
-      className={`border rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer ${
-        notification.type === 'complaint_notification' || notification.type === 'complaint'
-          ? 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200' 
-          : notification.type === 'success' 
+      className={`border rounded-xl p-4 hover:shadow-md transition-shadow cursor-pointer ${notification.type === 'complaint_notification' || notification.type === 'complaint'
+        ? 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200'
+        : notification.type === 'success'
           ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
           : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
-      } ${!notification.isRead ? 'ring-2 ring-blue-200' : 'opacity-90'}`}
+        } ${!notification.isRead ? 'ring-2 ring-blue-200' : 'opacity-90'}`}
     >
       <div className="flex items-start space-x-4">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-          notification.type === 'complaint_notification' || notification.type === 'complaint'
-            ? 'bg-gradient-to-br from-red-400 to-orange-500' 
-            : notification.type === 'success' 
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${notification.type === 'complaint_notification' || notification.type === 'complaint'
+          ? 'bg-gradient-to-br from-red-400 to-orange-500'
+          : notification.type === 'success'
             ? 'bg-gradient-to-br from-green-400 to-emerald-500'
             : 'bg-gradient-to-br from-blue-400 to-indigo-500'
-        }`}>
+          }`}>
           <span className="text-white text-lg">
-            {notification.type === 'complaint_notification' || notification.type === 'complaint' ? '🚩' : 
-             notification.type === 'success' ? '✅' : 
-             notification.type === 'warning' ? '⚠️' : '💡'}
+            {notification.type === 'complaint_notification' || notification.type === 'complaint' ? '🚩' :
+              notification.type === 'success' ? '✅' :
+                notification.type === 'warning' ? '⚠️' : '💡'}
           </span>
         </div>
         <div className="flex-1">
@@ -94,10 +92,10 @@ const NotificationCard = ({ notification, index, onMarkAsRead }) => {
                 }}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <svg 
-                  className={`w-4 h-4 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
-                  fill="none" 
-                  stroke="currentColor" 
+                <svg
+                  className={`w-4 h-4 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -105,16 +103,16 @@ const NotificationCard = ({ notification, index, onMarkAsRead }) => {
               </button>
             </div>
           </div>
-          
+
           {/* Collapsed view */}
           {!isExpanded && (
             <p className="text-gray-700 leading-relaxed line-clamp-2">
-              {notification.message?.length > 100 
-                ? notification.message.substring(0, 100) + '...' 
+              {notification.message?.length > 100
+                ? notification.message.substring(0, 100) + '...'
                 : notification.message}
             </p>
           )}
-          
+
           {/* Expanded view */}
           {isExpanded && (
             <motion.div
@@ -126,7 +124,7 @@ const NotificationCard = ({ notification, index, onMarkAsRead }) => {
               <p className="text-gray-700 leading-relaxed">
                 {notification.message}
               </p>
-              
+
               {(notification.type === 'complaint_notification' || notification.type === 'complaint') && notification.complaintDetails && (
                 <div className="bg-white bg-opacity-50 rounded-lg p-4 space-y-2">
                   <h5 className="font-medium text-gray-800 mb-3">Chi tiết khiếu nại:</h5>
@@ -152,7 +150,7 @@ const NotificationCard = ({ notification, index, onMarkAsRead }) => {
                   </div>
                 </div>
               )}
-              
+
               {notification.action && (
                 <button className="mt-3 px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors">
                   {notification.action}
@@ -171,19 +169,19 @@ const NotificationCard = ({ notification, index, onMarkAsRead }) => {
 // Real-time wait counter component with WebSocket sync
 const RealTimeCounter = ({ createdAt, ticketId }) => {
   const [waitTime, setWaitTime] = useState('00:00');
-  
+
   useEffect(() => {
     if (!createdAt) return;
-    
+
     let intervalId;
-    
+
     const updateWaitTime = () => {
       const now = new Date();
       const created = new Date(createdAt);
       const elapsedMs = now - created;
       const elapsedMinutes = Math.floor(elapsedMs / 60000);
       const elapsedSeconds = Math.floor((elapsedMs % 60000) / 1000);
-      
+
       // Giống homepage: tự đếm không cần WebSocket/refresh
       if (elapsedMinutes >= 10) {
         setWaitTime(">10p");
@@ -196,15 +194,15 @@ const RealTimeCounter = ({ createdAt, ticketId }) => {
         setWaitTime(`${elapsedMinutes}:${elapsedSeconds.toString().padStart(2, '0')}`);
       }
     };
-    
+
     updateWaitTime(); // Initial update
     intervalId = setInterval(updateWaitTime, 1000); // Tự đếm mỗi giây như homepage
-    
+
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
   }, [createdAt]); // Chỉ phụ thuộc vào createdAt, không cần WebSocket
-  
+
   return (
     <span className="font-mono text-sm tracking-wider text-gray-600">
       {waitTime}
@@ -218,7 +216,7 @@ const StaffDashboard = () => {
   const [activeTab, setActiveTab] = useState('queue');
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [currentTicket, setCurrentTicket] = useState(null);
-  
+
   // Modal states
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -227,7 +225,7 @@ const StaffDashboard = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [ticketToComplete, setTicketToComplete] = useState(null);
   const [ticketToCancel, setTicketToCancel] = useState(null);
-  
+
   // Data states
   const [queueData, setQueueData] = useState([]);
   const [performanceData, setPerformanceData] = useState({
@@ -247,7 +245,7 @@ const StaffDashboard = () => {
     language: 'vi',
     displayMode: 'compact'
   });
-  
+
   // Additional states
   const [notifications, setNotifications] = useState([]);
   const [showProfessionalNotificationModal, setShowProfessionalNotificationModal] = useState(false);
@@ -257,7 +255,7 @@ const StaffDashboard = () => {
     servedToday: 0,
     averageRating: 0
   });
-  
+
   // Chat states
   const [chatRooms, setChatRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -289,10 +287,10 @@ const StaffDashboard = () => {
     if (selectedRoom && data.room_id === selectedRoom.id) {
       setMessages(prev => [...prev, data.message]);
     }
-    
+
     // Update chat rooms with new message indicator
-    setChatRooms(prev => prev.map(room => 
-      room.id === data.room_id 
+    setChatRooms(prev => prev.map(room =>
+      room.id === data.room_id
         ? { ...room, hasNewMessage: true, lastMessage: data.message }
         : room
     ));
@@ -362,31 +360,31 @@ const StaffDashboard = () => {
   // Load dashboard data with real-time database query - SMOOTH NO-FLICKER VERSION
   const loadDashboardData = useCallback(async () => {
     if (!user) return;
-    
+
     // Chỉ track lần đầu load thôi, không loading khi refresh
-    
+
     try {
       // Real-time query tickets with status "waiting" and "called" from database
       const queueResponse = await api.get('staff/queue');
-      
+
       // Backend should return both waiting and called tickets for this staff
       const allTickets = Array.isArray(queueResponse) ? queueResponse : [];
-      
+
       setQueueData(allTickets);
-      
+
       // Get current ticket being served (status "called")
       const currentResponse = await api.get('staff/current-ticket');
       setCurrentTicket(currentResponse?.current_ticket || null);
-      
+
       // Load notifications from database  
       // TODO: NOTIFICATIONS DISABLED - await loadNotifications();
-      
+
       // Load department info (chỉ load lần đầu)
       if (isInitialLoad) {
         const deptResponse = await api.get('staff/department');
         setDepartmentInfo(deptResponse || { name: 'Phòng Ban', code: '' });
       }
-      
+
       // Update overview stats with real-time data
       const overviewResponse = await api.get('staff/dashboard/overview');
       setOverviewStats({
@@ -397,14 +395,14 @@ const StaffDashboard = () => {
         completed_today: overviewResponse?.completed_today || 0,
         average_rating: overviewResponse?.average_rating || 0
       });
-      
+
       if (activeTab === 'performance') {
         // GỌI API MỚI CHO PERFORMANCE DATA VỚI DỮ LIỆU THẬT TỪ DATABASE  
         const perfResponse = await api.get('staff/performance/weekly');
-        
+
         // Load rating distribution from database
         const ratingsResponse = await api.get('staff/performance/ratings-distribution');
-        
+
         // Cập nhật với dữ liệu thật từ overviewResponse (đã có todayStats)
         setPerformanceData({
           todayStats: {
@@ -418,7 +416,7 @@ const StaffDashboard = () => {
           ratingDistribution: ratingsResponse?.ratingDistribution || [] // Real rating data
         });
       }
-      
+
     } catch (error) {
       console.error("Error loading dashboard data:", error);
       if (isInitialLoad) {
@@ -461,10 +459,10 @@ const StaffDashboard = () => {
       // const response = await api.get(`staff/chat/rooms/${roomId}/messages`);
       // setMessages(response?.messages || []);
       setMessages([]); // Temporary: empty messages
-      
+
       // Mark room as read
-      setChatRooms(prev => prev.map(room => 
-        room.id === roomId 
+      setChatRooms(prev => prev.map(room =>
+        room.id === roomId
           ? { ...room, hasNewMessage: false }
           : room
       ));
@@ -477,12 +475,12 @@ const StaffDashboard = () => {
   // TODO: Send message feature - đang comment tạm thời
   const sendMessage = async () => {
     if (!messageInput.trim() || !selectedRoom) return;
-    
+
     try {
       // await api.post(`staff/chat/rooms/${selectedRoom.id}/messages`, {
       //   message: messageInput.trim()
       // });
-      
+
       setMessageInput('');
       // await loadMessages(selectedRoom.id);
       console.log("Chat feature is disabled temporarily"); // Temporary log
@@ -507,17 +505,17 @@ const StaffDashboard = () => {
       setNotificationMessage("Bạn vẫn đang phục vụ một khách hàng! Vui lòng hoàn thành hoặc hủy trước khi gọi khách tiếp theo.");
       return;
     }
-    
+
     try {
       // Call next ticket: waiting -> called - FIX: dùng POST thay vì PUT
       const response = await api.post('staff/queue/call-next');
-      
+
       if (response?.id) {
         // Update current ticket being served
         setCurrentTicket(response);
         setShowNotificationModal(true);
         setNotificationMessage(`Đã gọi khách hàng ${response.ticket_number}`);
-        
+
         // Refresh dashboard to update queue table and current ticket display
         await loadDashboardData();
       } else {
@@ -543,31 +541,31 @@ const StaffDashboard = () => {
       setNotificationMessage("Không có vé nào đang được phục vụ để hoàn thành!");
       return;
     }
-    
+
     setTicketToComplete(ticketToProcess);
     setShowCompleteModal(true);
   };
 
   const confirmCompleteTicket = async () => {
     if (!ticketToComplete) return;
-    
+
     try {
       // Complete ticket: called -> completed
       await api.put(`staff/tickets/${ticketToComplete.id}/complete`);
-      
+
       // Clear current ticket and refresh dashboard
       setCurrentTicket(null);
       setShowCompleteModal(false);
       setTicketToComplete(null);
       setShowNotificationModal(true);
       setNotificationMessage(`Đã hoàn thành phục vụ khách hàng ${ticketToComplete.ticket_number}! Khách hàng sẽ được chuyển đến trang đánh giá.`);
-      
+
       // Refresh dashboard immediately to show updated data
       await loadDashboardData();
-      
+
       // Note: When ticket status becomes "completed", customer at /waiting/{ticketId} 
       // will be automatically redirected to /review/{ticketId} via WebSocket or polling
-      
+
     } catch (error) {
       console.error("Error completing ticket:", error);
       setShowNotificationModal(true);
@@ -589,28 +587,28 @@ const StaffDashboard = () => {
       setNotificationMessage("Không có vé nào để hủy!");
       return;
     }
-    
+
     setTicketToCancel(ticketToProcess);
     setShowCancelModal(true);
   };
 
   const confirmCancelTicket = async () => {
     if (!ticketToCancel) return;
-    
+
     try {
       // Cancel ticket: waiting/called -> no_show
       await api.put(`staff/tickets/${ticketToCancel.id}/cancel`);
-      
+
       // Clear current ticket if canceling current served ticket (called status)
       if (ticketToCancel.status === 'called') {
         setCurrentTicket(null);
       }
-      
+
       setShowCancelModal(false);
       setTicketToCancel(null);
       setShowNotificationModal(true);
       setNotificationMessage(`Đã hủy vé ${ticketToCancel.ticket_number}! Trạng thái: Không có mặt.`);
-      
+
       // Refresh dashboard immediately to show updated data
       await loadDashboardData();
     } catch (error) {
@@ -646,7 +644,7 @@ const StaffDashboard = () => {
     if (user) {
       loadDashboardData();
       loadChatRooms();
-      
+
       // 🔗 Set staff as online when dashboard loads
       const setOnlineStatus = async () => {
         try {
@@ -657,7 +655,7 @@ const StaffDashboard = () => {
         }
       };
       setOnlineStatus();
-      
+
       // 🔗 Handle page unload (browser close/refresh)
       const handleBeforeUnload = () => {
         try {
@@ -667,9 +665,9 @@ const StaffDashboard = () => {
           console.error('Error in beforeunload:', error);
         }
       };
-      
+
       window.addEventListener('beforeunload', handleBeforeUnload);
-      
+
       // Chỉ refresh khi đang ở tab queue và có queue data
       let refreshInterval;
       if (activeTab === 'queue') {
@@ -677,25 +675,25 @@ const StaffDashboard = () => {
           loadDashboardData();
         }, 5000); // Tăng từ 2s lên 5s để giảm flickering
       }
-      
+
       if (socket) {
         socket.on('notification', handleNotification);
         socket.on('ticket_update', handleTicketUpdate);
         socket.on('new_message', handleNewMessage);
-        
+
         socket.on('new_ticket_in_department', (data) => {
           if (data.department_id === user.department_id) {
             loadDashboardData();
           }
         });
-        
+
         socket.on('ticket_status_changed', (data) => {
           if (data.department_id === user.department_id) {
             loadDashboardData();
           }
         });
       }
-      
+
       return () => {
         // 🔗 Set staff as offline when component unmounts
         const setOfflineStatus = async () => {
@@ -707,9 +705,9 @@ const StaffDashboard = () => {
           }
         };
         setOfflineStatus();
-        
+
         window.removeEventListener('beforeunload', handleBeforeUnload);
-        
+
         if (refreshInterval) {
           clearInterval(refreshInterval);
         }
@@ -731,7 +729,7 @@ const StaffDashboard = () => {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <motion.div 
+              <motion.div
                 whileHover={{ rotate: 5, scale: 1.05 }}
                 className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg"
               >
@@ -747,17 +745,17 @@ const StaffDashboard = () => {
                     {user?.full_name || user?.username || 'Nhân viên'}
                   </span>
                   <span className="px-3 py-1 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 text-xs rounded-full font-medium">
-                    {user?.role === 'staff' ? 'Nhân viên' : 
-                     user?.role === 'manager' ? 'Quản lý' : 
-                     user?.role === 'admin' ? 'Quản trị' : 'Nhân viên'}
+                    {user?.role === 'staff' ? 'Nhân viên' :
+                      user?.role === 'manager' ? 'Quản lý' :
+                        user?.role === 'admin' ? 'Quản trị' : 'Nhân viên'}
                   </span>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               {/* WebSocket Status Indicator */}
-              <motion.div 
+              <motion.div
                 className="flex items-center space-x-2 px-3 py-2 rounded-full bg-white/80 backdrop-blur border border-gray-200 shadow-sm"
                 whileHover={{ scale: 1.05 }}
               >
@@ -766,9 +764,9 @@ const StaffDashboard = () => {
                   {isConnected ? 'Kết nối' : 'Offline'}
                 </span>
               </motion.div>
-              
+
               <motion.div className="relative" whileHover={{ scale: 1.05 }}>
-                <motion.div 
+                <motion.div
                   whileHover={{ scale: 1.1 }}
                   onClick={handleNotificationClick}
                   className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center cursor-pointer shadow-lg"
@@ -781,7 +779,7 @@ const StaffDashboard = () => {
                   </span>
                 )}
               </motion.div>
-              
+
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -794,42 +792,37 @@ const StaffDashboard = () => {
           </div>
         </div>
       </FadeIn>
-      
+
       {/* Navigation Tabs */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="flex space-x-4 overflow-x-auto pb-2">
-          <TabButton 
-            active={activeTab === 'queue'} 
+          <TabButton
+            active={activeTab === 'queue'}
             onClick={() => setActiveTab('queue')}
             icon="👥"
             text="Quản lý hàng đợi"
           />
-          <TabButton 
-            active={activeTab === 'shift'} 
+          <TabButton
+            active={activeTab === 'shift'}
             onClick={() => setActiveTab('shift')}
             icon="🕒"
             text="Ca làm việc"
           />
-          <TabButton 
-            active={activeTab === 'ai-helper'} 
+          <TabButton
+            active={activeTab === 'ai-helper'}
             onClick={() => setActiveTab('ai-helper')}
             icon="🤖"
             text="AI Helper"
           />
-          <TabButton 
-            active={activeTab === 'performance'} 
+          <TabButton
+            active={activeTab === 'performance'}
             onClick={() => setActiveTab('performance')}
             icon="📊"
             text="Hiệu suất"
           />
-          <TabButton 
-            active={activeTab === 'knowledge-base'} 
-            onClick={() => setActiveTab('knowledge-base')}
-            icon="📚"
-            text="Kiến thức"
-          />
         </div>
-        
+
+
         {/* Main Content */}
         <div className="mt-6">
           <AnimatePresence mode="wait">
@@ -848,13 +841,13 @@ const StaffDashboard = () => {
                     <span className="text-4xl mr-3">📋</span>
                     Quản lý hàng đợi
                   </h2>
-                  
+
                   {(() => {
                     // Helper variables để tránh gọi find() nhiều lần
                     const waitingTickets = queueData.filter(ticket => ticket.status === 'waiting');
                     const calledTickets = queueData.filter(ticket => ticket.status === 'called');
                     const currentServedTicket = calledTickets[0]; // Chỉ có thể có 1 ticket called
-                    
+
                     return (
                       <>
                         {/* Status Cards */}
@@ -898,7 +891,7 @@ const StaffDashboard = () => {
                             <p className="text-purple-700 mt-1 text-xs">trung bình</p>
                           </ScaleIn>
                         </div>
-                        
+
                         {/* Current Ticket (if any) */}
                         {currentServedTicket && (
                           <FadeIn className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-2xl p-6 mb-6">
@@ -943,8 +936,8 @@ const StaffDashboard = () => {
                         )}
                       </>
                     );
-                  })()} 
-                  
+                  })()}
+
                   {/* Queue Table */}
                   <FadeIn className="bg-white rounded-xl border border-blue-100 overflow-hidden shadow-md">
                     <div className="overflow-x-auto">
@@ -994,20 +987,18 @@ const StaffDashboard = () => {
                             queueData.map((ticket) => {
                               const isWaiting = ticket.status === 'waiting';
                               const isCalled = ticket.status === 'called';
-                              
+
                               return (
-                                <tr 
-                                  key={ticket.id} 
-                                  className={`transition-colors ${
-                                    isCalled 
-                                      ? 'bg-green-50 border-l-4 border-green-500' 
-                                      : 'hover:bg-blue-50'
-                                  }`}
+                                <tr
+                                  key={ticket.id}
+                                  className={`transition-colors ${isCalled
+                                    ? 'bg-green-50 border-l-4 border-green-500'
+                                    : 'hover:bg-blue-50'
+                                    }`}
                                 >
                                   <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`font-semibold ${
-                                      isCalled ? 'text-green-700' : 'text-gray-900'
-                                    }`}>
+                                    <span className={`font-semibold ${isCalled ? 'text-green-700' : 'text-gray-900'
+                                      }`}>
                                       {ticket.ticket_number}
                                     </span>
                                   </td>
@@ -1034,26 +1025,26 @@ const StaffDashboard = () => {
                                     <div className="flex space-x-2">
                                       {/* Nút Gọi - chỉ hiển thị cho ticket waiting và khi không có currentTicket */}
                                       {isWaiting && !currentTicket && (
-                                        <button 
+                                        <button
                                           onClick={() => callNextTicket(ticket)}
                                           className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
                                         >
                                           📢 Gọi
                                         </button>
                                       )}
-                                      
+
                                       {/* Nút Hoàn thành - chỉ hiển thị cho ticket called */}
                                       {isCalled && (
-                                        <button 
+                                        <button
                                           onClick={() => completeTicket(ticket)}
                                           className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
                                         >
                                           ✅ Hoàn thành
                                         </button>
                                       )}
-                                      
+
                                       {/* Nút Hủy - hiển thị cho cả waiting và called */}
-                                      <button 
+                                      <button
                                         onClick={() => cancelTicket(ticket)}
                                         className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
                                       >
@@ -1069,65 +1060,62 @@ const StaffDashboard = () => {
                       </table>
                     </div>
                   </FadeIn>
-                  
+
                   {/* Queue Actions */}
                   {(() => {
                     const waitingCount = queueData.filter(ticket => ticket.status === 'waiting').length;
                     const calledCount = queueData.filter(ticket => ticket.status === 'called').length;
                     const hasCalledTicket = calledCount > 0;
-                    
+
                     return (
                       <div className="flex flex-wrap items-center justify-between mt-6 gap-4">
                         <div className="flex gap-4">
                           <div className="bg-yellow-100 rounded-lg px-4 py-2 text-sm border border-yellow-200">
-                            <span className="font-semibold text-yellow-800">Đang chờ:</span> 
+                            <span className="font-semibold text-yellow-800">Đang chờ:</span>
                             <span className="text-yellow-900 ml-1">{waitingCount} khách</span>
                           </div>
                           <div className="bg-green-100 rounded-lg px-4 py-2 text-sm border border-green-200">
-                            <span className="font-semibold text-green-800">Đang phục vụ:</span> 
+                            <span className="font-semibold text-green-800">Đang phục vụ:</span>
                             <span className="text-green-900 ml-1">{calledCount} khách</span>
                           </div>
                         </div>
-                        
+
                         <div className="flex flex-wrap gap-4">
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={callNextTicket}
                             disabled={isInitialLoad || hasCalledTicket}
-                            className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${
-                              hasCalledTicket || isInitialLoad
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:shadow-xl'
-                            }`}
+                            className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${hasCalledTicket || isInitialLoad
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:shadow-xl'
+                              }`}
                           >
                             {isInitialLoad ? '⏳ Đang tải...' : '📢 Gọi khách tiếp theo'}
                           </motion.button>
-                          
+
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => completeTicket()}
                             disabled={isInitialLoad || !hasCalledTicket}
-                            className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${
-                              !hasCalledTicket || isInitialLoad
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:shadow-xl'
-                            }`}
+                            className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${!hasCalledTicket || isInitialLoad
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:shadow-xl'
+                              }`}
                           >
                             ✅ Hoàn thành phục vụ
                           </motion.button>
-                          
+
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => cancelTicket()}
                             disabled={isInitialLoad || !hasCalledTicket}
-                            className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${
-                              !hasCalledTicket || isInitialLoad
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-xl'
-                            }`}
+                            className={`px-6 py-3 rounded-xl font-medium shadow-lg transition-all ${!hasCalledTicket || isInitialLoad
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:shadow-xl'
+                              }`}
                           >
                             ❌ Hủy khách
                           </motion.button>
@@ -1153,6 +1141,7 @@ const StaffDashboard = () => {
             )}
 
             {/* AI Helper Tab */}
+
             {activeTab === 'ai-helper' && (
               <motion.div
                 key="ai-helper"
@@ -1183,7 +1172,7 @@ const StaffDashboard = () => {
                     <span className="text-4xl mr-3">📊</span>
                     Hiệu suất làm việc
                   </h2>
-                  
+
                   {/* Today's Stats */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <ScaleIn delay={0.1} className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
@@ -1232,8 +1221,8 @@ const StaffDashboard = () => {
                       </div>
                       <div className="text-6xl">
                         {performanceData.rankingPosition === 1 ? '🥇' :
-                         performanceData.rankingPosition === 2 ? '🥈' :
-                         performanceData.rankingPosition === 3 ? '🥉' : '📊'}
+                          performanceData.rankingPosition === 2 ? '🥈' :
+                            performanceData.rankingPosition === 3 ? '🥉' : '📊'}
                       </div>
                     </div>
                   </FadeIn>
@@ -1252,7 +1241,7 @@ const StaffDashboard = () => {
                               <div className="flex-1 flex items-center space-x-2">
                                 {/* Tickets bar */}
                                 <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
-                                  <div 
+                                  <div
                                     className="bg-gradient-to-r from-blue-400 to-blue-600 h-6 rounded-full flex items-center justify-center transition-all duration-1000"
                                     style={{ width: `${Math.min((item.tickets || 0) * 6, 100)}%` }}
                                   >
@@ -1290,13 +1279,13 @@ const StaffDashboard = () => {
                         <div className="relative w-32 h-32">
                           <svg className="w-32 h-32 transform -rotate-90">
                             <circle cx="64" cy="64" r="50" stroke="#e5e7eb" strokeWidth="12" fill="transparent" />
-                            <circle 
-                              cx="64" cy="64" r="50" 
-                              stroke="url(#gradient)" 
-                              strokeWidth="12" 
+                            <circle
+                              cx="64" cy="64" r="50"
+                              stroke="url(#gradient)"
+                              strokeWidth="12"
                               fill="transparent"
-                              strokeDasharray={`${(performanceData?.todayStats?.avgRating || 0) * 62.8} 314`} 
-                              className="transition-all duration-1000" 
+                              strokeDasharray={`${(performanceData?.todayStats?.avgRating || 0) * 62.8} 314`}
+                              className="transition-all duration-1000"
                             />
                             <defs>
                               <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -1314,7 +1303,7 @@ const StaffDashboard = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Rating breakdown */}
                         <div className="space-y-2">
                           {(performanceData?.ratingDistribution || [
@@ -1327,7 +1316,7 @@ const StaffDashboard = () => {
                             <div key={item.stars} className="flex items-center space-x-2 text-sm">
                               <span className="w-8 text-gray-600">{item.stars}⭐</span>
                               <div className="w-16 h-3 bg-gray-200 rounded-full">
-                                <div 
+                                <div
                                   className={`h-3 rounded-full ${item.color} transition-all duration-1000`}
                                   style={{ width: `${item.count * 4}%` }}
                                 ></div>
@@ -1343,22 +1332,7 @@ const StaffDashboard = () => {
               </motion.div>
             )}
 
-            {/* Knowledge Base Tab */}
-            {activeTab === 'knowledge-base' && (
-              <motion.div
-                key="knowledge-base"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                <FadeIn className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-blue-100 p-8">
-                  <KnowledgeBase role="staff" />
-                </FadeIn>
-              </motion.div>
-            )}
-            
+
             {/* Old Settings Tab - Removed */}
             {false && activeTab === 'settings' && (
               <motion.div
@@ -1374,7 +1348,7 @@ const StaffDashboard = () => {
                     <span className="text-4xl mr-3">⚙️</span>
                     Cài đặt
                   </h2>
-                  
+
                   <div className="space-y-6">
                     {/* Theme Settings */}
                     <div className="bg-gray-50 rounded-xl p-6">
@@ -1463,7 +1437,7 @@ const StaffDashboard = () => {
           </AnimatePresence>
         </div>
       </div>
-      
+
       {/* Modals */}
       <AlertModal
         isOpen={showNotificationModal}
@@ -1472,7 +1446,7 @@ const StaffDashboard = () => {
         message={notificationMessage}
         type="info"
       />
-      
+
       <ConfirmModal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
@@ -1482,7 +1456,7 @@ const StaffDashboard = () => {
         confirmText="Đăng xuất"
         cancelText="Hủy"
       />
-      
+
       <ConfirmModal
         isOpen={showCompleteModal}
         onClose={() => setShowCompleteModal(false)}
@@ -1492,7 +1466,7 @@ const StaffDashboard = () => {
         confirmText="Hoàn thành"
         cancelText="Hủy"
       />
-      
+
       <ConfirmModal
         isOpen={showCancelModal}
         onClose={() => setShowCancelModal(false)}
@@ -1551,19 +1525,19 @@ const StaffDashboard = () => {
                     <h3 className="text-lg font-semibold text-gray-800">
                       Thông báo gần đây ({notifications.length})
                     </h3>
-                    <button 
+                    <button
                       onClick={() => setNotifications([])}
                       className="text-sm text-gray-500 hover:text-red-600 transition-colors"
                     >
                       Xóa tất cả
                     </button>
                   </div>
-                  
+
                   {notifications.map((notification, index) => (
-                    <NotificationCard 
-                      key={notification.id || index} 
-                      notification={notification} 
-                      index={index} 
+                    <NotificationCard
+                      key={notification.id || index}
+                      notification={notification}
+                      index={index}
                       onMarkAsRead={markNotificationAsRead}
                     />
                   ))}
@@ -1598,11 +1572,10 @@ const TabButton = ({ active, onClick, icon, text }) => (
     whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.95 }}
     onClick={onClick}
-    className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors whitespace-nowrap ${
-      active 
-        ? 'bg-blue-500 text-white shadow-md' 
-        : 'bg-white text-gray-700 hover:bg-gray-100'
-    }`}
+    className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors whitespace-nowrap ${active
+      ? 'bg-blue-500 text-white shadow-md'
+      : 'bg-white text-gray-700 hover:bg-gray-100'
+      }`}
   >
     <span className="text-lg">{icon}</span>
     <span>{text}</span>

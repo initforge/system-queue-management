@@ -54,7 +54,7 @@ class ShiftResponse(ShiftBase):
 
 # Schedule Schemas
 class ScheduleBase(BaseModel):
-    staff_id: UUID = Field(..., description="Staff member ID")
+    staff_id: int = Field(..., description="Staff member ID")
     shift_id: UUID = Field(..., description="Shift ID")
     scheduled_date: date = Field(..., description="Date of scheduled work")
     notes: Optional[str] = Field(None, description="Additional notes")
@@ -68,17 +68,19 @@ class ScheduleUpdate(BaseModel):
 
 class ScheduleResponse(ScheduleBase):
     id: UUID
-    manager_id: UUID
+    manager_id: int
     status: ShiftStatus
     created_at: datetime
     updated_at: datetime
     
     # Related data
     staff_name: Optional[str] = Field(None, description="Staff member name")
+    staff_username: Optional[str] = Field(None, description="Staff member username")
+    staff_email: Optional[str] = Field(None, description="Staff member email")
     shift_name: Optional[str] = Field(None, description="Shift name")
     shift_type: Optional[ShiftType] = Field(None, description="Shift type")
-    start_time: Optional[time] = Field(None, description="Shift start time")
-    end_time: Optional[time] = Field(None, description="Shift end time")
+    start_time: Optional[str] = Field(None, description="Shift start time")
+    end_time: Optional[str] = Field(None, description="Shift end time")
 
     class Config:
         from_attributes = True
@@ -98,8 +100,8 @@ class LeaveRequestUpdate(BaseModel):
 
 class LeaveRequestResponse(LeaveRequestBase):
     id: UUID
-    staff_id: UUID
-    manager_id: Optional[UUID]
+    staff_id: int
+    manager_id: Optional[int]
     status: LeaveStatus
     rejection_reason: Optional[str]
     submitted_at: datetime
@@ -126,8 +128,8 @@ class ShiftExchangeCreate(ShiftExchangeBase):
 
 class ShiftExchangeResponse(ShiftExchangeBase):
     id: UUID
-    requesting_staff_id: UUID
-    manager_id: Optional[UUID]
+    requesting_staff_id: int
+    manager_id: Optional[int]
     status: str  # exchange_status enum
     rejection_reason: Optional[str]
     requested_at: datetime
@@ -153,8 +155,8 @@ class CheckinCreate(CheckinBase):
 
 class CheckinResponse(CheckinBase):
     id: UUID
-    staff_id: UUID
-    manager_id: Optional[UUID]
+    staff_id: int
+    manager_id: Optional[int]
     checkin_time: datetime
     status: CheckinStatus
     approved_at: Optional[datetime]

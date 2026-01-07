@@ -61,12 +61,12 @@ const PersonalSchedule = () => {
   // Load personal schedule
   const loadPersonalSchedule = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       const startDate = format(currentWeek, 'yyyy-MM-dd');
       const schedulesData = await scheduleAPI.getWeeklySchedule(startDate, user.id);
-      
+
       // Transform API response to component format
       const transformedSchedules = (Array.isArray(schedulesData) ? schedulesData : []).map(s => ({
         id: s.id,
@@ -82,7 +82,7 @@ const PersonalSchedule = () => {
         status: s.status,
         notes: s.notes
       }));
-      
+
       setSchedules(transformedSchedules);
     } catch (error) {
       console.error('Error loading personal schedule:', error);
@@ -99,6 +99,52 @@ const PersonalSchedule = () => {
   useEffect(() => {
     loadPersonalSchedule();
   }, [loadPersonalSchedule]);
+
+  // Real-time updates via WebSocket
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token || !user) return;
+
+    const wsUrl = `ws://${window.location.hostname}:8000/api/v1/schedule/ws/${user.id}?token=${token}`;
+    let ws;
+    let reconnectTimeout;
+
+    const connect = () => {
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log('PersonalSchedule WebSocket connected');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'schedule_updated' || data.type === 'bulk_update') {
+            console.log('Schedule updated, refreshing...');
+            loadPersonalSchedule();
+          }
+        } catch (e) {
+          console.error('WebSocket message parse error:', e);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('PersonalSchedule WebSocket disconnected, reconnecting...');
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('PersonalSchedule WebSocket error:', error);
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, [user, loadPersonalSchedule]);
 
   // Get shift for a specific date
   const getShiftForDate = (date) => {
@@ -189,7 +235,7 @@ const PersonalSchedule = () => {
             </svg>
           </button>
         </div>
-        
+
         <div className="text-lg font-semibold text-gray-900">
           {format(currentWeek, 'dd MMM')} - {format(addDays(currentWeek, 6), 'dd MMM yyyy')}
         </div>
@@ -198,12 +244,12 @@ const PersonalSchedule = () => {
       {/* Schedule Timeline */}
       <div className="bg-white rounded-xl p-6 shadow-md">
         <h2 className="text-xl font-bold text-gray-900 mb-6">Lịch làm việc của tôi</h2>
-        
+
         <div className="space-y-4">
           {weekDays.map(day => {
             const schedule = getShiftForDate(day.date);
             const colors = schedule ? getShiftColors(schedule.shift?.shift_type) : null;
-            
+
             return (
               <motion.div
                 key={day.date}
@@ -211,8 +257,8 @@ const PersonalSchedule = () => {
                 animate={{ opacity: 1, x: 0 }}
                 className={`
                   rounded-xl p-4 border-2 transition-all
-                  ${schedule 
-                    ? `${colors.bg} ${colors.border}` 
+                  ${schedule
+                    ? `${colors.bg} ${colors.border}`
                     : 'bg-gray-50 border-gray-200'
                   }
                   ${day.isToday ? 'ring-2 ring-blue-400 ring-offset-2' : ''}
@@ -227,7 +273,7 @@ const PersonalSchedule = () => {
                       <div className="text-sm">{day.dayName}</div>
                       <div className="text-xl">{day.dayNumber}</div>
                     </div>
-                    
+
                     {schedule ? (
                       <motion.div
                         initial={{ scale: 0.9 }}
@@ -255,7 +301,7 @@ const PersonalSchedule = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   {schedule && day.isToday && (
                     <div className="ml-4">
                       <span className="px-3 py-1 bg-blue-500 text-white text-xs rounded-full font-medium">
@@ -269,41 +315,11 @@ const PersonalSchedule = () => {
           })}
         </div>
       </div>
-
-      {/* Upcoming Shifts Summary */}
-      {schedules.length > 0 && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 shadow-md border border-blue-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Tóm tắt tuần này</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {shifts.map(shift => {
-              const count = schedules.filter(s => s.shift_id === shift.id).length;
-              const colors = getShiftColors(shift.shift_type);
-              
-              return (
-                <div
-                  key={shift.id}
-                  className={`${colors.bg} rounded-lg p-4 border ${colors.border}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className={`text-sm font-semibold ${colors.text}`}>
-                        {shift.name}
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {count} ca
-                      </div>
-                    </div>
-                    <div className="text-2xl">{colors.icon}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
 export default PersonalSchedule;
+
+
 

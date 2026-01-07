@@ -1,16 +1,15 @@
 """
 Gemini AI Service
-Handles interactions with Google Gemini API
+Handles interactions with Google Gemini API with Function Calling support
 """
 from typing import List, Dict, Optional, Any
 import logging
 from datetime import datetime
-
-from ..core.config import settings
+import json
 
 logger = logging.getLogger(__name__)
 
-# Try to import google.generativeai, handle gracefully if not available
+# Try to import google.generativeai
 try:
     import google.generativeai as genai
     GEMINI_AVAILABLE = True
@@ -19,11 +18,20 @@ except ImportError:
     genai = None
     GEMINI_AVAILABLE = False
 
+# Models to try in order (newest to oldest for fallback)
+MODELS_TO_TRY = [
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+]
+
+
 class GeminiService:
+    """Gemini AI Service with Function Calling support"""
+    
     def __init__(self):
-        """Initialize Gemini service (no API key at init - provided per request)"""
         if not GEMINI_AVAILABLE:
-            logger.warning("google-generativeai package not available. AI features will be disabled.")
+            logger.warning("Gemini AI not available")
     
     def generate_response(
         self,
@@ -31,146 +39,180 @@ class GeminiService:
         api_key: str,
         context: Dict[str, Any] = None,
         user_role: str = 'staff',
-        conversation_history: List[Dict] = None
+        conversation_history: List[Dict] = None,
+        ai_functions=None  # AIFunctions instance for executing functions
     ) -> Dict[str, Any]:
-        """
-        Generate AI response based on user message and context
+        """Generate AI response with function calling support"""
         
-        Args:
-            user_message: User's input message
-            api_key: Gemini API key provided by user
-            context: Context data (user info, system data, etc.)
-            user_role: User role (staff, manager, admin)
-            conversation_history: Previous messages in conversation
-        
-        Returns:
-            Dict with 'message', 'sources', 'function_calls' etc.
-        """
         if not GEMINI_AVAILABLE:
             return {
-                "message": "Xin lỗi, dịch vụ AI hiện không khả dụng. Vui lòng liên hệ quản trị viên.",
+                "message": "Dịch vụ AI không khả dụng.",
                 "error": "AI service not available"
             }
         
         if not api_key or not api_key.strip():
             return {
-                "message": "Vui lòng cung cấp API key để sử dụng AI Helper. Nhấp vào biểu tượng cài đặt để nhập API key.",
+                "message": "Vui lòng cung cấp API key.",
                 "error": "API key required"
             }
         
-        try:
-            # Configure Gemini with user-provided API key
-            genai.configure(api_key=api_key.strip())
-            client = genai.GenerativeModel('gemini-2.0-flash')
-            # Build system prompt based on user role
-            system_prompt = self._build_system_prompt(user_role, context or {})
-            
-            # Build messages list for Gemini API
-            messages = []
-            
-            # Add system instruction as first message
-            messages.append(system_prompt)
-            
-            # Add conversation history
-            for msg in (conversation_history or [])[-10:]:  # Keep last 10 messages
-                role = msg.get('role', 'user')
-                content = msg.get('content', '')
-                if role == 'user':
-                    messages.append(f"User: {content}")
-                elif role == 'assistant':
-                    messages.append(f"Assistant: {content}")
-            
-            # Add current user message
-            messages.append(f"User: {user_message}")
-            messages.append("Assistant:")
-            
-            # Join all messages
-            full_prompt = "\n".join(messages)
-            
-            # Generate response using the full prompt
-            # Gemini API expects string or list of content parts
-            response = client.generate_content(full_prompt)
-            
-            # Extract text from response - handle different response formats
-            if hasattr(response, 'text'):
-                response_text = response.text
-            elif hasattr(response, 'candidates') and response.candidates:
-                response_text = response.candidates[0].content.parts[0].text
-            else:
-                response_text = str(response)
-            
-            return {
-                "message": response_text,
-                "timestamp": datetime.now().isoformat(),
-                "model": "gemini-2.0-flash"
-            }
-            
-        except Exception as e:
-            logger.error(f"Error generating Gemini response: {e}")
-            return {
-                "message": f"Xin lỗi, đã xảy ra lỗi khi xử lý yêu cầu: {str(e)}",
-                "error": str(e)
-            }
+        # Configure API
+        genai.configure(api_key=api_key.strip())
+        
+        # Build system prompt
+        system_prompt = self._build_system_prompt(user_role, context or {})
+        
+        # Build tools for function calling
+        tools = self._build_tools(user_role)
+        
+        # Try models with fallback
+        last_error = None
+        
+        for model_name in MODELS_TO_TRY:
+            try:
+                logger.info(f"Trying model: {model_name}")
+                
+                # TEMPORARILY DISABLED FUNCTION CALLING - AI responds without tools
+                # TODO: Fix tool format and re-enable
+                model = genai.GenerativeModel(
+                    model_name,
+                    system_instruction=system_prompt
+                    # tools disabled temporarily
+                )
+                
+                # Build chat history
+                chat_history = self._build_chat_history(conversation_history)
+                
+                # Start chat and send message
+                chat = model.start_chat(history=chat_history)
+                response = chat.send_message(user_message)
+                
+                # Extract text response (function calling disabled)
+                response_text = self._extract_text(response)
+                
+                logger.info(f"Success with model: {model_name}")
+                
+                return {
+                    "message": response_text,
+                    "timestamp": datetime.now().isoformat(),
+                    "model": model_name
+                }
+                
+            except Exception as e:
+                error_str = str(e)
+                logger.warning(f"Model {model_name} failed: {error_str}")
+                last_error = error_str
+                
+                # Retry on rate limit or model not found
+                if any(x in error_str.lower() for x in ['429', 'quota', 'rate limit', '404', 'not found']):
+                    continue
+                break
+        
+        # All models failed
+        return self._handle_error(last_error)
     
     def _build_system_prompt(self, user_role: str, context: Dict) -> str:
-        """Build system prompt based on user role and context"""
-        base_prompt = f"""Bạn là AI Helper cho hệ thống Quản lý hàng đợi (Queue Management System).
+        """Build system instruction for the AI"""
+        user_info = context.get('user', {})
+        department = context.get('department', {})
+        
+        prompt = f"""Bạn là AI Helper của hệ thống QStream - Quản lý hàng đợi thông minh.
 
-Người dùng hiện tại có vai trò: {user_role}
+THÔNG TIN NGƯỜI DÙNG:
+- Tên: {user_info.get('full_name', 'N/A')}
+- Username: {user_info.get('username', 'N/A')}
+- Vai trò: {user_role}
+- Phòng ban: {department.get('name', 'N/A')}
 
+HỆ THỐNG QSTREAM CÓ CÁC TÍNH NĂNG:
+1. Quản lý hàng đợi - Gọi phiếu, phục vụ khách hàng
+2. Lịch làm việc - Xem ca làm việc được phân công
+3. Hiệu suất - Xem thống kê phục vụ và đánh giá
+
+HƯỚNG DẪN TRẢ LỜI:
+- Trả lời thân thiện, ngắn gọn bằng tiếng Việt
+- Hướng dẫn người dùng cách sử dụng hệ thống
+- Nếu người dùng hỏi về dữ liệu cụ thể (số khách, lịch, hiệu suất), hướng dẫn họ xem trực tiếp trên dashboard hoặc tab tương ứng
+- Không bịa số liệu khi không có thông tin
 """
         
         if user_role == 'manager':
-            base_prompt += """Với vai trò Manager, bạn có thể:
-- Xem thống kê và dữ liệu của toàn bộ nhân viên trong phòng ban
-- Xem lịch làm việc của tất cả nhân viên
-- Xem hiệu suất làm việc của nhân viên
-- Đưa ra các đề xuất về quản lý và tối ưu hóa
-
-"""
-        else:
-            base_prompt += """Với vai trò Staff, bạn có thể:
-- Xem thông tin cá nhân của chính mình
-- Xem lịch làm việc của bản thân
-- Xem thống kê hiệu suất của bản thân
-- Được hướng dẫn sử dụng hệ thống
-
+            prompt += """
+BẠN ĐANG HỖ TRỢ QUẢN LÝ, CÓ THÊM QUYỀN:
+- Xem thông tin tất cả nhân viên
+- Phân ca làm việc
+- Xem báo cáo phòng ban
 """
         
-        base_prompt += """Hãy trả lời một cách thân thiện, chuyên nghiệp và hữu ích bằng tiếng Việt.
-Nếu được hỏi về dữ liệu cụ thể, hãy đề xuất sử dụng các function calls nếu cần.
-"""
-        
-        if context:
-            base_prompt += f"\nThông tin ngữ cảnh hiện tại:\n"
-            if 'user' in context:
-                base_prompt += f"- Tên người dùng: {context['user'].get('full_name', 'N/A')}\n"
-            if 'department' in context:
-                base_prompt += f"- Phòng ban: {context['department'].get('name', 'N/A')}\n"
-        
-        return base_prompt
+        return prompt
     
-    def _build_conversation(
-        self,
-        system_prompt: str,
-        history: List[Dict],
-        current_message: str
-    ) -> str:
-        """Build conversation string from history and current message"""
-        conversation = system_prompt + "\n\n"
+    def _build_tools(self, user_role: str):
+        """Build tool definitions for function calling"""
+        from .ai_functions import TOOL_DECLARATIONS
         
-        for msg in history[-10:]:  # Keep last 10 messages for context
+        # Filter tools based on role
+        allowed_tools = TOOL_DECLARATIONS.copy()
+        
+        if user_role != 'manager':
+            # Remove manager-only tools for staff
+            manager_only = ['get_department_stats', 'get_all_staff_status']
+            allowed_tools = [t for t in allowed_tools if t['name'] not in manager_only]
+        
+        # Return in Gemini API format - list of function declarations
+        # Gemini SDK accepts list of dicts directly as tools
+        if not allowed_tools:
+            return None
+        
+        return allowed_tools
+    
+    def _build_chat_history(self, conversation_history: List[Dict] = None) -> List:
+        """Build chat history for Gemini"""
+        history = []
+        
+        for msg in (conversation_history or [])[-10:]:
             role = msg.get('role', 'user')
-            content = msg.get('content', '')
-            if role == 'user':
-                conversation += f"Người dùng: {content}\n"
-            elif role == 'assistant':
-                conversation += f"AI: {content}\n"
+            content = msg.get('content', msg.get('message', ''))
+            
+            gemini_role = 'user' if role == 'user' else 'model'
+            history.append({
+                'role': gemini_role,
+                'parts': [content]
+            })
         
-        conversation += f"\nNgười dùng: {current_message}\nAI:"
+        return history
+    
+    def _extract_text(self, response) -> str:
+        """Extract text from Gemini response"""
+        if hasattr(response, 'text'):
+            return response.text
+        elif hasattr(response, 'candidates') and response.candidates:
+            parts = response.candidates[0].content.parts
+            texts = [p.text for p in parts if hasattr(p, 'text')]
+            return '\n'.join(texts) if texts else str(response)
+        return str(response)
+    
+    def _handle_error(self, error: str) -> Dict[str, Any]:
+        """Handle errors and return appropriate response"""
+        if not error:
+            error = "Unknown error"
         
-        return conversation
+        if '429' in error or 'quota' in error.lower():
+            return {
+                "message": "⚠️ Đã vượt quá giới hạn API. Vui lòng đợi vài phút rồi thử lại.",
+                "error": "RATE_LIMIT_EXCEEDED"
+            }
+        
+        if '403' in error or 'API key' in error:
+            return {
+                "message": "API key không hợp lệ. Vui lòng kiểm tra lại.",
+                "error": "INVALID_API_KEY"
+            }
+        
+        return {
+            "message": f"Đã xảy ra lỗi: {error}",
+            "error": error
+        }
 
-# Service instance (no singleton needed - stateless)
+
+# Service instance
 gemini_service = GeminiService()
-

@@ -28,9 +28,16 @@ const MessageList = ({ messages, loading }) => {
     );
   }
 
+  // Sort messages by created_at to ensure correct chronological order
+  const sortedMessages = [...messages].sort((a, b) => {
+    const timeA = new Date(a.created_at || 0).getTime();
+    const timeB = new Date(b.created_at || 0).getTime();
+    return timeA - timeB;
+  });
+
   return (
     <div className="space-y-4 overflow-y-auto">
-      {messages.map((message, index) => {
+      {sortedMessages.map((message, index) => {
         const isUser = message.role === 'user';
         
         return (

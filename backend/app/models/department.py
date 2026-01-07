@@ -22,3 +22,4 @@ class Department(Base):
     staff = relationship("User", back_populates="department")
     tickets = relationship("QueueTicket", back_populates="department")
     qr_codes = relationship("QRCode", back_populates="department")
+    counters = relationship("Counter", back_populates="department")

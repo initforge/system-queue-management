@@ -19,5 +19,7 @@ class ServiceSession(Base):
     notes = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
     
-    # Relationships
+    # Relationships (without back_populates to avoid circular issues)
     ticket = relationship("QueueTicket", back_populates="service_sessions")
+    staff = relationship("User")
+    counter = relationship("Counter", back_populates="service_sessions")

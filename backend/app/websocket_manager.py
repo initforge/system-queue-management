@@ -148,5 +148,51 @@ class WebSocketManager:
             except Exception as e:
                 print(f"Error sending queue update to {client_id}: {str(e)}")
 
+    # Schedule-related methods
+    schedule_connections: Dict[int, WebSocket] = {}  # user_id -> websocket
+    
+    async def schedule_connect(self, websocket: WebSocket, user_id: int, user_role: str, department_id: int = None):
+        """Connect a schedule WebSocket"""
+        await websocket.accept()
+        self.schedule_connections[user_id] = websocket
+        print(f"Schedule WebSocket connected for user {user_id} (role: {user_role})")
+    
+    def schedule_disconnect(self, websocket: WebSocket):
+        """Disconnect a schedule WebSocket"""
+        user_id_to_remove = None
+        for user_id, ws in self.schedule_connections.items():
+            if ws == websocket:
+                user_id_to_remove = user_id
+                break
+        if user_id_to_remove:
+            del self.schedule_connections[user_id_to_remove]
+            print(f"Schedule WebSocket disconnected for user {user_id_to_remove}")
+    
+    async def send_schedule_message(self, websocket: WebSocket, message: dict):
+        """Send a message to a specific schedule WebSocket"""
+        try:
+            await websocket.send_text(json.dumps(message))
+        except Exception as e:
+            print(f"Error sending schedule message: {e}")
+    
+    async def notify_schedule_updated(self, schedule_data: dict, department_id: int = None):
+        """Notify all connected schedule clients about an update"""
+        message = {
+            "type": "schedule_updated",
+            "data": schedule_data,
+            "timestamp": asyncio.get_event_loop().time()
+        }
+        
+        for user_id, websocket in list(self.schedule_connections.items()):
+            try:
+                await websocket.send_text(json.dumps(message))
+                print(f"Sent schedule update to user {user_id}")
+            except Exception as e:
+                print(f"Error sending schedule update to user {user_id}: {e}")
+                # Remove dead connections
+                if user_id in self.schedule_connections:
+                    del self.schedule_connections[user_id]
+
 # Create a global instance
 websocket_manager = WebSocketManager()
+

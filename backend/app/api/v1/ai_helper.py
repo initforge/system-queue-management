@@ -35,8 +35,10 @@ async def chat(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Send message to AI Helper"""
+    """Send message to AI Helper with function calling support"""
     try:
+        from app.services.ai_functions import AIFunctions
+        
         # Get or create conversation ID
         conversation_id = chat_data.conversation_id or str(uuid.uuid4())
         
@@ -48,32 +50,49 @@ async def chat(
         
         history_list = [
             {"role": msg.role, "content": msg.message}
-            for msg in history[-10:]  # Last 10 messages
+            for msg in history[-10:]
         ]
         
         # Build context
-        context = chat_data.context or {}
-        if not context.get('user'):
-            context['user'] = {
+        context = {
+            'user': {
                 'id': current_user.id,
                 'full_name': current_user.full_name,
+                'username': current_user.username,
                 'role': current_user.role,
                 'department_id': current_user.department_id
             }
+        }
         
-        # Generate AI response
+        if current_user.department:
+            context['department'] = {
+                'id': current_user.department.id,
+                'name': current_user.department.name
+            }
+        
+        # Check API key
         if not chat_data.api_key:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="API key is required. Please provide your Gemini API key."
+                detail="API key is required."
             )
         
+        # Create AI Functions instance for database queries
+        ai_functions = AIFunctions(
+            db=db,
+            user_id=current_user.id,
+            user_role=current_user.role,
+            department_id=current_user.department_id
+        )
+        
+        # Generate AI response with function calling
         response = gemini_service.generate_response(
             user_message=chat_data.message,
             api_key=chat_data.api_key,
             context=context,
             user_role=current_user.role,
-            conversation_history=history_list
+            conversation_history=history_list,
+            ai_functions=ai_functions
         )
         
         # Save user message
@@ -151,30 +170,31 @@ async def get_context(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get available context data for AI Helper"""
+    """Get basic context data for AI Helper (data queries via function calling)"""
     try:
         context = {
             "user": {
                 "id": current_user.id,
                 "full_name": current_user.full_name,
+                "username": current_user.username,
                 "role": current_user.role,
                 "department_id": current_user.department_id
             }
         }
         
-        # Add department info if available
         if current_user.department:
             context["department"] = {
                 "id": current_user.department.id,
-                "name": current_user.department.name,
-                "code": current_user.department.code
+                "name": current_user.department.name
             }
         
         return context
+        
     except Exception as e:
         logger.error(f"Error getting context: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error retrieving context"
         )
+
 

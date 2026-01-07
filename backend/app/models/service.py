@@ -24,3 +24,4 @@ class Service(Base):
     # Relationships
     department = relationship("Department", back_populates="services")
     tickets = relationship("QueueTicket", back_populates="service")
+    form_fields = relationship("ServiceFormField", back_populates="service")
