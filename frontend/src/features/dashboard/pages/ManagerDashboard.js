@@ -83,41 +83,35 @@ const ManagerDashboard = () => {
         return;
       }
 
-      const response = await api.resolveComplaint(complaintId, resolution);
+      await api.resolveComplaint(complaintId, resolution);
 
-      if (response.ok) {
-        // Update local state - remove complaint from waiting list
-        setComplaintsList(prev => prev.filter(c => c.id !== complaintId));
+      // Update local state - remove complaint from waiting list
+      setComplaintsList(prev => prev.filter(c => c.id !== complaintId));
 
-        setComplaintStats(prev => ({
-          waiting: prev.waiting - 1,
-          completed: prev.completed + 1
-        }));
+      setComplaintStats(prev => ({
+        waiting: prev.waiting - 1,
+        completed: prev.completed + 1
+      }));
 
-        setShowComplaintDetailModal(false);
-        setSelectedComplaint(null);
+      setShowComplaintDetailModal(false);
+      setSelectedComplaint(null);
 
-        // Show success notification
-        handleNotification({
-          message: `✅ Khiếu nại #${complaintId} đã được giải quyết thành công`
-        });
+      // Show success notification
+      handleNotification({
+        message: `✅ Khiếu nại #${complaintId} đã được giải quyết thành công`
+      });
 
-        // Refresh complaints data
-        loadComplaints();
-      } else if (response.status === 401) {
-        console.error('Authentication failed');
+      // Refresh complaints data
+      await loadComplaints();
+    } catch (error) {
+      console.error('Error resolving complaint:', error);
+      if (error.message.includes('401') || error.message.includes('Authentication')) {
         logout();
       } else {
-        console.error('Failed to resolve complaint:', response.status);
         handleNotification({
-          message: `❌ Lỗi ${response.status}: Không thể giải quyết khiếu nại`
+          message: `❌ Không thể giải quyết khiếu nại: ${error.message}`
         });
       }
-    } catch (error) {
-      console.error("Error resolving complaint:", error);
-      handleNotification({
-        message: '❌ Lỗi kết nối khi giải quyết khiếu nại'
-      });
     }
   };
 
