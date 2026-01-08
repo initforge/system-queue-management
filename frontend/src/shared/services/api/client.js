@@ -95,6 +95,13 @@ export class ApiClient {
     });
     return response.data;
   }
+
+  // Manager-specific methods
+  async resolveComplaint(complaintId, resolutionNotes) {
+    return this.post(`manager/complaints/${complaintId}/resolve`, {
+      response: resolutionNotes || ''
+    });
+  }
 }
 
 export default apiClient;
