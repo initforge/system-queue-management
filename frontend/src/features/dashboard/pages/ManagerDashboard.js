@@ -236,6 +236,15 @@ const ManagerDashboard = () => {
     }
   }, [user, activeTab, loadComplaints]);
 
+  // Update online staff count whenever staffList changes
+  useEffect(() => {
+    const onlineCount = staffList.filter(staff => staff.status === 'online').length;
+    setDashboardStats(prev => ({
+      ...prev,
+      onlineStaff: onlineCount
+    }));
+  }, [staffList]);
+
   // Handle notifications
   const handleNotification = (data) => {
     setNotifications(prev => [data, ...prev].slice(0, 20));
@@ -246,16 +255,27 @@ const ManagerDashboard = () => {
   // Handle staff updates from WebSocket
   const handleStaffUpdate = (data) => {
     if (data.type === 'status_change') {
-      setStaffList(prev => prev.map(staff =>
-        staff.id === data.staff_id ? { ...staff, status: data.status } : staff
-      ));
+      setStaffList(prev => {
+        const updated = prev.map(staff =>
+          staff.id === data.staff_id ? { ...staff, status: data.status } : staff
+        );
+        
+        // Update online staff count immediately
+        const onlineCount = updated.filter(s => s.status === 'online').length;
+        setDashboardStats(prevStats => ({
+          ...prevStats,
+          onlineStaff: onlineCount
+        }));
+        
+        return updated;
+      });
     } else if (data.type === 'performance_update') {
       setStaffList(prev => prev.map(staff =>
         staff.id === data.staff_id ? { ...staff, performance: data.performance } : staff
       ));
     }
 
-    // Refresh dashboard stats
+    // Refresh full dashboard stats
     loadDashboardData();
   };
 
