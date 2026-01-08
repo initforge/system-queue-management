@@ -181,9 +181,9 @@ class ApiService {
   }
 
   async resolveComplaint(complaintId, resolutionNotes) {
-    return this.makeRequest(`/feedback/complaints/${complaintId}/resolve`, {
-      method: 'PATCH',
-      body: JSON.stringify({ resolution_notes: resolutionNotes }),
+    return this.makeRequest(`/manager/complaints/${complaintId}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ response: resolutionNotes || '' }),
     });
   }
 

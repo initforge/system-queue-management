@@ -83,9 +83,7 @@ const ManagerDashboard = () => {
         return;
       }
 
-      const response = await api.post(`manager/complaints/${complaintId}/resolve`, {
-        response: resolution
-      });
+      const response = await api.resolveComplaint(complaintId, resolution);
 
       if (response.ok) {
         // Update local state - remove complaint from waiting list
