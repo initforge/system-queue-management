@@ -9,9 +9,9 @@ import enum
 from ..core.database import Base
 
 class TicketComplaintStatus(enum.Enum):
-    WAITING = "waiting"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
+    waiting = "waiting"
+    processing = "processing"
+    completed = "completed"
 
 class TicketComplaint(Base):
     __tablename__ = "ticket_complaints"
@@ -32,4 +32,3 @@ class TicketComplaint(Base):
     # Relationships
     ticket = relationship("QueueTicket", back_populates="ticket_complaints") 
     assigned_manager = relationship("User", foreign_keys=[assigned_to])
-    notifications = relationship("StaffNotification", back_populates="complaint")

@@ -14,14 +14,10 @@ class Service(Base):
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=False)
     service_code = Column(String(20), unique=True, index=True)
     estimated_duration = Column(Integer, default=15)  # in minutes
-    max_daily_capacity = Column(Integer, default=100)
-    form_schema = Column(JSONB, nullable=True)
     is_active = Column(Boolean, default=True)
-    requires_appointment = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     department = relationship("Department", back_populates="services")
     tickets = relationship("QueueTicket", back_populates="service")
-    form_fields = relationship("ServiceFormField", back_populates="service")
+

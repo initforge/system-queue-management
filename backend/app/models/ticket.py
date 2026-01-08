@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -12,11 +13,11 @@ class TicketStatus(str, enum.Enum):
     no_show = "no_show"
 
 class TicketPriority(str, enum.Enum):
-    NORMAL = "normal"
-    HIGH = "high"
-    ELDERLY = "elderly"
-    DISABLED = "disabled"
-    VIP = "vip"
+    normal = "normal"
+    high = "high"
+    elderly = "elderly"
+    disabled = "disabled"
+    vip = "vip"
 
 class QueueTicket(Base):
     __tablename__ = "queue_tickets"
@@ -31,22 +32,20 @@ class QueueTicket(Base):
     staff_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     counter_id = Column(Integer, ForeignKey("counters.id"), nullable=True)
     status = Column(Enum(TicketStatus), default=TicketStatus.waiting)
-    queue_position = Column(Integer, nullable=True)  # Position in queue
+    priority = Column(Enum(TicketPriority), default=TicketPriority.normal)
+    queue_position = Column(Integer, nullable=True)
+    form_data = Column(JSONB, nullable=True)
     notes = Column(Text, nullable=True)
-    estimated_wait_time = Column(Integer)  # in minutes
+    estimated_wait_time = Column(Integer)
     created_at = Column(DateTime, default=datetime.utcnow)
     called_at = Column(DateTime, nullable=True)
-    served_at = Column(DateTime, nullable=True)  # Changed from serving_started_at
+    served_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
 
-    
-    # Rating and review fields (from database schema)
-    service_rating = Column(Integer, nullable=True)  # 1-5 stars
-    staff_rating = Column(Integer, nullable=True)    # 1-5 stars  
-    speed_rating = Column(Integer, nullable=True)    # 1-5 stars
-    overall_rating = Column(Integer, nullable=True)  # 1-5 stars
-    review_comments = Column(Text, nullable=True)    # Customer feedback
-    reviewed_at = Column(DateTime, nullable=True)    # When review was submitted
+    # Simplified rating (overall only)
+    overall_rating = Column(Integer, nullable=True)
+    review_comments = Column(Text, nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
 
     # Relationships
     service = relationship("Service", back_populates="tickets")
@@ -54,6 +53,3 @@ class QueueTicket(Base):
     staff = relationship("User", back_populates="tickets_handled")
     counter = relationship("Counter", back_populates="tickets")
     ticket_complaints = relationship("TicketComplaint", back_populates="ticket")
-    feedback = relationship("Feedback", back_populates="ticket")
-    notifications = relationship("StaffNotification", back_populates="ticket")
-    service_sessions = relationship("ServiceSession", back_populates="ticket")

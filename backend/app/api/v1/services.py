@@ -60,7 +60,7 @@ class ServiceCreate(BaseModel):
     department_id: int
     estimated_duration: int = 15
     code: str
-    priority_level: TicketPriority = TicketPriority.NORMAL
+    priority_level: TicketPriority = TicketPriority.normal
 
 class ServiceUpdate(BaseModel):
     name: Optional[str] = None

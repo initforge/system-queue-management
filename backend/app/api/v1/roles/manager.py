@@ -10,7 +10,7 @@ from datetime import date, datetime, timezone
 
 from ....core.database import get_db
 from ....core.security import get_current_user, get_current_user_sync
-from ....models import User, QueueTicket, Service, TicketComplaint, Department, StaffNotification
+from ....models import User, QueueTicket, Service, TicketComplaint, Department
 from ....services.schedule_service import ScheduleService
 
 router = APIRouter()
@@ -265,7 +265,7 @@ async def get_staff_list(
     try:
         from ....models.ticket import TicketStatus  # Import here to avoid circular dependencies
 
-        # Filter staff by department if manager, show all if admin
+        # Show ALL staff (no department filter) but mark status correctly
         query = db.query(User).filter(
             and_(
                 User.role == 'staff',
@@ -273,10 +273,7 @@ async def get_staff_list(
             )
         )
         
-        if current_user.role == 'manager' and current_user.department_id:
-            # query = query.filter(User.department_id == current_user.department_id)
-            pass
-            
+        # No department filter - show all staff
         staff_members = query.all()
         
         result = []
@@ -297,19 +294,23 @@ async def get_staff_list(
             
             performance = round(float(avg_rating), 1) if avg_rating else 0.0
             
-            # Determine status and counter
-            # Determine status
-            is_recent_login = False
-            if staff.last_login:
-                # Naive check, assuming UTC or consistent tz
-                # In production, use timezone-aware comparison
-                delta = datetime.utcnow() - staff.last_login
-                if delta.total_seconds() < 1800: # 30 mins
-                    is_recent_login = True
+            # Determine status based on actual activity, not is_active flag
+            # is_active is for account enabled/disabled, NOT for online status
+            
+            # Check if staff has any recent activity (tickets in last 30 minutes)
+            from datetime import timedelta
+            recent_cutoff = datetime.utcnow() - timedelta(minutes=30)
+            
+            has_recent_activity = db.query(QueueTicket).filter(
+                and_(
+                    QueueTicket.staff_id == staff.id,
+                    QueueTicket.created_at >= recent_cutoff
+                )
+            ).first() is not None
             
             if active_ticket:
                 staff_status = "busy"
-            elif is_recent_login:
+            elif has_recent_activity:
                 staff_status = "online"
             else:
                 staff_status = "offline"
@@ -459,12 +460,11 @@ def get_manager_info(
         
         dashboard_stats_query = db.execute(text("""
             SELECT 
-                -- 1. Nhân viên online (NV có hoạt động trong 30p gần đây)
+                -- 1. Nhân viên online (NV active trong phòng ban của manager)
                 (SELECT COUNT(*) FROM users 
                  WHERE role = 'staff' 
                  AND is_active = true 
-                 AND department_id = :dept_id
-                 AND (last_login > NOW() - INTERVAL '30 minutes' OR last_login IS NULL)) as online_staff,
+                 AND department_id = :dept_id) as online_staff,
                 
                 -- 2. Yêu cầu đang xử lý (tickets waiting/called trong phòng ban)
                 (SELECT COUNT(*) FROM queue_tickets 
@@ -567,77 +567,5 @@ async def resolve_complaint(
         )
 
 
-@router.post("/send-staff-notification")
-async def send_staff_notification(
-    notification_data: dict,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Send notification to staff member"""
-    if current_user.role not in ['manager', 'admin']:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only managers can send notifications"
-        )
-    
-    try:
-        # Find staff member by email
-        staff_member = db.query(User).filter(
-            User.email == notification_data.get('recipient_email'),
-            User.role == 'staff'
-        ).first()
-        
-        if not staff_member:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Staff member not found"
-            )
-        
-        # Create notification in database
-        complaint_details = {
-            "customer_name": notification_data.get('customer_name'),
-            "customer_phone": notification_data.get('customer_phone'), 
-            "ticket_number": notification_data.get('ticket_number'),
-            "content": notification_data.get('complaint_content'),
-            "service_name": notification_data.get('service_name'),
-            "department_name": notification_data.get('department_name')
-        }
-        
-        new_notification = StaffNotification(
-            recipient_id=staff_member.id,
-            sender_id=current_user.id,
-            title=notification_data.get('title', 'Khiếu nại từ khách hàng'),
-            message=notification_data.get('message'),
-            notification_type="complaint",
-            priority="normal",
-            complaint_details=complaint_details
-        )
-        
-        db.add(new_notification)
-        db.commit()
-        db.refresh(new_notification)
-        
-        # Create response payload for frontend
-        notification_payload = {
-            "type": "complaint_notification",
-            "title": new_notification.title,
-            "message": new_notification.message,
-            "time": new_notification.created_at.strftime('%H:%M:%S'),
-            "recipient_email": notification_data.get('recipient_email'),
-            "complaintDetails": complaint_details
-        }
-        
-        return {
-            "message": f"Notification sent successfully to {staff_member.full_name}",
-            "recipient": staff_member.full_name,
-            "notification": notification_payload,
-            "notification_id": new_notification.id,
-            "sent_at": new_notification.created_at.isoformat()
-        }
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error sending notification: {str(e)}"
-        )
+
+# Notification endpoint REMOVED - feature deprecated

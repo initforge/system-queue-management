@@ -15,10 +15,8 @@ class Counter(Base):
     assigned_staff_id = Column(Integer, ForeignKey("users.id"))
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relationships
     department = relationship("Department", back_populates="counters")
     assigned_staff = relationship("User", foreign_keys=[assigned_staff_id])
     tickets = relationship("QueueTicket", back_populates="counter")
-    service_sessions = relationship("ServiceSession", back_populates="counter")

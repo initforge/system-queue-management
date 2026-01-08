@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, date
 # import json
 from ...core.database import get_db
 from ...core.security import get_current_user_sync
-from ...models import User, QueueTicket, Department, Service, TicketStatus, StaffNotification, TicketComplaint
+from ...models import User, QueueTicket, Department, Service, TicketStatus, TicketComplaint
 # from ...websocket_manager import websocket_manager
 
 router = APIRouter()

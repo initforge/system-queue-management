@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, date
 from ....core.database import get_db
 from ....core.security import get_current_user_sync
-from ....models import User, QueueTicket, Department, Service, TicketStatus, StaffNotification
+from ....models import User, QueueTicket, Department, Service, TicketStatus
 
 router = APIRouter()
 
@@ -465,11 +465,10 @@ def set_staff_online(
         raise HTTPException(status_code=403, detail="Staff access required")
     
     try:
-        # Update last_login và online status
+        # Update online status only (last_login column doesn't exist)
         db.execute(text("""
             UPDATE users 
-            SET last_login = NOW(),
-                is_active = true 
+            SET is_active = true 
             WHERE id = :user_id
         """), {"user_id": current_user.id})
         db.commit()
@@ -491,11 +490,8 @@ def set_staff_offline(
         raise HTTPException(status_code=403, detail="Staff access required")
     
     try:
-        db.execute(text("""
-            UPDATE users 
-            SET last_login = NOW()
-            WHERE id = :user_id
-        """), {"user_id": current_user.id})
+        # Offline status doesn't need database update (last_login column doesn't exist)
+        # Could add is_active = false if needed
         db.commit()
         
         print(f"👤 Staff {current_user.full_name} ({current_user.id}) is now OFFLINE")
