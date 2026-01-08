@@ -18,7 +18,6 @@ class StaffPerformance(Base):
     rating_count = Column(Integer, default=0)
     avg_rating = Column(Numeric(3,2), default=0)
     created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relationships
     user = relationship("User")

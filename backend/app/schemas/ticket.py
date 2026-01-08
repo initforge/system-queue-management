@@ -2,19 +2,9 @@
 from pydantic import BaseModel, validator
 from typing import Optional
 from datetime import datetime
-from enum import Enum
 
-class TicketStatus(str, Enum):
-    WAITING = "waiting"
-    CALLED = "called"
-    COMPLETED = "completed"
-    NO_SHOW = "no_show"
-
-class TicketPriority(str, Enum):
-    LOW = "low"
-    NORMAL = "normal"
-    HIGH = "high"
-    URGENT = "urgent"
+# Import enums from models to ensure consistency
+from ..models.ticket import TicketStatus, TicketPriority
 
 # Base Ticket Schema
 class TicketBase(BaseModel):
@@ -23,7 +13,7 @@ class TicketBase(BaseModel):
     customer_email: Optional[str] = None
     service_id: int
     department_id: int
-    priority: TicketPriority = TicketPriority.NORMAL
+    priority: TicketPriority = TicketPriority.normal
     notes: Optional[str] = None
 
 # Ticket Creation Schema

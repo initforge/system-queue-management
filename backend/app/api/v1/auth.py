@@ -1,18 +1,14 @@
 """
-Authentication API endpoints
+Authentication API endpoints (Simplified)
 """
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime, timedelta
 
 from ...core.database import get_db
 from ...core.security import get_current_user, require_active_user
 from ...models.user import User
-from sqlalchemy import and_
-from datetime import date, datetime, timedelta
-
-# DailyLoginLog is now directly imported from models package
-from ...models import DailyLoginLog
 from ...schemas.auth import (
     UserLogin, 
     Token, 
@@ -46,31 +42,6 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
                 detail="Email hoặc mật khẩu không chính xác",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        
-        # Update last login
-        login_time = datetime.utcnow()
-        user.last_login = login_time
-        db.commit()
-        
-        # Record first daily login (only once per day)
-        today = date.today()
-        existing_login = db.query(DailyLoginLog).filter(
-            and_(
-                DailyLoginLog.user_id == user.id,
-                DailyLoginLog.login_date == today
-            )
-        ).first()
-        
-        if not existing_login:
-            # This is the first login of the day, record it
-            daily_login = DailyLoginLog(
-                user_id=user.id,
-                login_date=today,
-                first_login_time=login_time,
-                ip_address=None  # Can be added from request if needed
-            )
-            db.add(daily_login)
-            db.commit()
             
         # Create access token
         access_token = create_access_token(data={"sub": user.email})
@@ -88,10 +59,8 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
         return response
         
     except HTTPException as he:
-        # Re-raise HTTP exceptions
         raise he
     except Exception as e:
-        # Log the error and return 500
         print(f"Unexpected error during login: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -101,7 +70,6 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
 @router.post("/register", response_model=UserInDB)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
-    # Check if email already exists
     if get_user_by_email(db, user_data.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

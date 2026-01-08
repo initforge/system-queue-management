@@ -16,22 +16,6 @@ class ShiftStatus(str, Enum):
     cancelled = "cancelled"
     completed = "completed"
 
-class LeaveType(str, Enum):
-    sick = "sick"
-    personal = "personal"
-    vacation = "vacation"
-    emergency = "emergency"
-
-class LeaveStatus(str, Enum):
-    pending = "pending"
-    approved = "approved"
-    rejected = "rejected"
-
-class CheckinStatus(str, Enum):
-    pending = "pending"
-    approved = "approved"
-    rejected = "rejected"
-
 # Shift Schemas
 class ShiftBase(BaseModel):
     name: str = Field(..., description="Shift name")
@@ -47,7 +31,6 @@ class ShiftResponse(ShiftBase):
     id: UUID
     is_active: bool
     created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True
@@ -71,7 +54,6 @@ class ScheduleResponse(ScheduleBase):
     manager_id: int
     status: ShiftStatus
     created_at: datetime
-    updated_at: datetime
     
     # Related data
     staff_name: Optional[str] = Field(None, description="Staff member name")
@@ -81,93 +63,6 @@ class ScheduleResponse(ScheduleBase):
     shift_type: Optional[ShiftType] = Field(None, description="Shift type")
     start_time: Optional[str] = Field(None, description="Shift start time")
     end_time: Optional[str] = Field(None, description="Shift end time")
-
-    class Config:
-        from_attributes = True
-
-# Leave Request Schemas
-class LeaveRequestBase(BaseModel):
-    leave_date: date = Field(..., description="Date of leave")
-    leave_type: LeaveType = Field(..., description="Type of leave")
-    reason: str = Field(..., min_length=1, max_length=500, description="Reason for leave")
-
-class LeaveRequestCreate(LeaveRequestBase):
-    pass
-
-class LeaveRequestUpdate(BaseModel):
-    status: LeaveStatus = Field(..., description="Leave request status")
-    rejection_reason: Optional[str] = Field(None, description="Reason for rejection")
-
-class LeaveRequestResponse(LeaveRequestBase):
-    id: UUID
-    staff_id: int
-    manager_id: Optional[int]
-    status: LeaveStatus
-    rejection_reason: Optional[str]
-    submitted_at: datetime
-    reviewed_at: Optional[datetime]
-    created_at: datetime
-    updated_at: datetime
-    
-    # Related data
-    staff_name: Optional[str] = Field(None, description="Staff member name")
-    manager_name: Optional[str] = Field(None, description="Manager name")
-
-    class Config:
-        from_attributes = True
-
-# Shift Exchange Schemas
-class ShiftExchangeBase(BaseModel):
-    target_staff_id: UUID = Field(..., description="Target staff member ID")
-    requesting_schedule_id: UUID = Field(..., description="Requesting staff's schedule ID")
-    target_schedule_id: UUID = Field(..., description="Target staff's schedule ID")
-    reason: str = Field(..., min_length=1, max_length=500, description="Reason for exchange")
-
-class ShiftExchangeCreate(ShiftExchangeBase):
-    pass
-
-class ShiftExchangeResponse(ShiftExchangeBase):
-    id: UUID
-    requesting_staff_id: int
-    manager_id: Optional[int]
-    status: str  # exchange_status enum
-    rejection_reason: Optional[str]
-    requested_at: datetime
-    reviewed_at: Optional[datetime]
-    created_at: datetime
-    updated_at: datetime
-    
-    # Related data
-    requesting_staff_name: Optional[str] = Field(None, description="Requesting staff name")
-    target_staff_name: Optional[str] = Field(None, description="Target staff name")
-
-    class Config:
-        from_attributes = True
-
-# Check-in Schemas
-class CheckinBase(BaseModel):
-    schedule_id: UUID = Field(..., description="Schedule ID")
-    location: Optional[str] = Field(None, description="Check-in location")
-    notes: Optional[str] = Field(None, description="Additional notes")
-
-class CheckinCreate(CheckinBase):
-    pass
-
-class CheckinResponse(CheckinBase):
-    id: UUID
-    staff_id: int
-    manager_id: Optional[int]
-    checkin_time: datetime
-    status: CheckinStatus
-    approved_at: Optional[datetime]
-    rejected_reason: Optional[str]
-    created_at: datetime
-    updated_at: datetime
-    
-    # Related data
-    staff_name: Optional[str] = Field(None, description="Staff member name")
-    shift_name: Optional[str] = Field(None, description="Shift name")
-    scheduled_date: Optional[date] = Field(None, description="Scheduled date")
 
     class Config:
         from_attributes = True
@@ -190,13 +85,64 @@ class WeeklyScheduleRequest(BaseModel):
 class ScheduleStats(BaseModel):
     total_staff: int = Field(..., description="Total staff count")
     scheduled_today: int = Field(..., description="Staff scheduled today")
-    pending_checkins: int = Field(..., description="Pending check-in requests")
-    pending_leave_requests: int = Field(..., description="Pending leave requests")
     upcoming_shifts: int = Field(..., description="Upcoming shifts this week")
 
 class StaffScheduleStats(BaseModel):
     total_shifts_this_week: int = Field(..., description="Total shifts this week")
     completed_shifts: int = Field(..., description="Completed shifts")
     upcoming_shifts: int = Field(..., description="Upcoming shifts")
-    pending_leave_requests: int = Field(..., description="Pending leave requests")
     attendance_rate: float = Field(..., description="Attendance rate percentage")
+
+# Leave Request Schemas (Placeholder for future implementation)
+class LeaveRequestCreate(BaseModel):
+    staff_id: int = Field(..., description="Staff member ID")
+    start_date: date = Field(..., description="Leave start date")
+    end_date: date = Field(..., description="Leave end date")
+    reason: Optional[str] = Field(None, description="Reason for leave")
+
+class LeaveRequestUpdate(BaseModel):
+    status: Optional[str] = Field(None, description="Leave request status")
+    reason: Optional[str] = Field(None, description="Reason for leave")
+
+class LeaveRequestResponse(BaseModel):
+    id: int
+    staff_id: int
+    start_date: date
+    end_date: date
+    reason: Optional[str]
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# Shift Exchange Schemas (Placeholder for future implementation)
+class ShiftExchangeCreate(BaseModel):
+    from_schedule_id: UUID = Field(..., description="Schedule ID to exchange from")
+    to_staff_id: int = Field(..., description="Staff member ID to exchange with")
+    reason: Optional[str] = Field(None, description="Reason for exchange")
+
+class ShiftExchangeResponse(BaseModel):
+    id: int
+    from_schedule_id: UUID
+    to_staff_id: int
+    reason: Optional[str]
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# Check-in Schemas (Placeholder for future implementation)
+class CheckinCreate(BaseModel):
+    schedule_id: UUID = Field(..., description="Schedule ID")
+    checkin_time: Optional[datetime] = Field(None, description="Check-in time")
+
+class CheckinResponse(BaseModel):
+    id: int
+    schedule_id: UUID
+    checkin_time: datetime
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

@@ -167,6 +167,16 @@ async def update_schedule(
     try:
         service = ScheduleService(db)
         schedule = service.update_schedule(schedule_id, schedule_data)
+        
+        # Notify via WebSocket if status changed to confirmed
+        if schedule_data.status == 'confirmed':
+            await websocket_manager.broadcast_schedule_update({
+                "type": "schedule_confirmed",
+                "schedule_id": str(schedule_id),
+                "staff_id": schedule.staff_id,
+                "scheduled_date": schedule.scheduled_date.isoformat()
+            })
+        
         return schedule
     except ValueError as e:
         raise HTTPException(
