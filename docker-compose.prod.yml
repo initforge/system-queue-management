@@ -1,6 +1,6 @@
-# Production Docker Compose for DigitalOcean Deployment
-# This is used for local production testing, not App Platform
-# App Platform uses .do/app.yaml instead
+# Production Docker Compose for DigitalOcean VPS
+# IP: 178.128.55.142
+# Usage: docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
 
 services:
   # PostgreSQL Database
@@ -9,7 +9,7 @@ services:
     container_name: queue_db_prod
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-queue_management}
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_USER: ${POSTGRES_USER:-qstream_admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -19,7 +19,7 @@ services:
       - queue-network
     restart: always
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qstream_admin}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -59,12 +59,14 @@ services:
         - REACT_APP_WS_URL=${REACT_APP_WS_URL}
     container_name: queue_frontend_prod
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - backend
     networks:
       - queue-network
     restart: always
+    environment:
+      - NODE_ENV=production
 
 volumes:
   postgres_data:

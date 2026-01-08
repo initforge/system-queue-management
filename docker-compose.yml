@@ -4,7 +4,7 @@ services:
     image: postgres:15-alpine
     container_name: queue_db
     environment:
-      POSTGRES_DB: queue_management
+      POSTGRES_DB: queue_manageement
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
     volumes:
@@ -36,7 +36,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://admin:password@db:5432/queue_management
+      - DATABASE_URL=postgresql://admin:password@db:5432/queue_manageement
       - REDIS_URL=redis://redis:6379
       - HOST=0.0.0.0
       - PORT=8000

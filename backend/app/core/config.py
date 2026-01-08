@@ -5,7 +5,7 @@ import os
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "postgresql://admin:password@db:5432/queue_management"
+    DATABASE_URL: str = "postgresql://admin:password@db:5432/queue_manageement"
     
     # Redis
     REDIS_URL: str = "redis://redis:6379"
